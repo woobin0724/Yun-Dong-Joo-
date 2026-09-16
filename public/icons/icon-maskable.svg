@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="sky" cx="50%" cy="28%" r="78%">
+      <stop offset="0%" stop-color="#2a3566"/>
+      <stop offset="60%" stop-color="#101736"/>
+      <stop offset="100%" stop-color="#070a18"/>
+    </radialGradient>
+    <linearGradient id="star" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fff6dd"/>
+      <stop offset="100%" stop-color="#ffd97d"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="0" fill="url(#sky)"/>
+  <g fill="#ffffff">
+    <circle cx="96" cy="120" r="4.5" opacity=".75"/>
+    <circle cx="164" cy="82" r="3" opacity=".55"/>
+    <circle cx="398" cy="108" r="5" opacity=".8"/>
+    <circle cx="430" cy="190" r="3" opacity=".5"/>
+    <circle cx="82" cy="236" r="3.5" opacity=".6"/>
+    <circle cx="336" cy="62" r="3" opacity=".45"/>
+  </g>
+  <path d="M256 120 l26 62 67 5 -51 44 16 65 -58-36 -58 36 16-65 -51-44 67-5z" fill="url(#star)"/>
+  <path d="M96 370 q80 -44 160 0 t160 0" stroke="#7fd1ae" stroke-width="10" fill="none" stroke-linecap="round" opacity=".65"/>
+  <path d="M96 418 q80 -44 160 0 t160 0" stroke="#7fd1ae" stroke-width="8" fill="none" stroke-linecap="round" opacity=".38"/>
+</svg>

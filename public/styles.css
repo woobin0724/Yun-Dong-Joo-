@@ -1,0 +1,599 @@
+/* ───────── 토큰 ───────── */
+:root {
+  --night-900: #070a18;
+  --night-800: #0b1021;
+  --night-700: #131a33;
+  --night-600: #1c2444;
+  --line: rgba(255, 255, 255, 0.10);
+  --line-strong: rgba(255, 255, 255, 0.20);
+
+  --ink: #eef1f8;
+  --ink-soft: #b9c0d6;
+  --ink-mute: #7f889f;
+
+  --star: #ffd97d;
+  --star-dim: #c8a95a;
+  --leaf: #7fd1ae;
+  --plum: #b79cff;
+  --rose: #ff9aa8;
+
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --tabbar-h: 60px;
+
+  --serif: 'Nanum Myeongjo', 'Noto Serif KR', serif;
+  --sans: 'Noto Sans KR', system-ui, -apple-system, 'Apple SD Gothic Neo', sans-serif;
+
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+/* display 를 지정한 요소에도 hidden 이 먹도록 — .gate 나 .view 를 숨길 때 필요하다. */
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--night-900);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* 밤하늘 배경 — 은은한 성운과 별빛 */
+.sky {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(1100px 620px at 78% -8%, rgba(120, 96, 200, 0.28), transparent 62%),
+    radial-gradient(760px 520px at 8% 4%, rgba(40, 92, 150, 0.26), transparent 60%),
+    radial-gradient(900px 700px at 50% 108%, rgba(24, 48, 96, 0.30), transparent 62%),
+    linear-gradient(180deg, var(--night-900), #05070f);
+}
+.sky::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.4px 1.4px at 12% 18%, rgba(255,255,255,.75), transparent),
+    radial-gradient(1.2px 1.2px at 32% 62%, rgba(255,255,255,.55), transparent),
+    radial-gradient(1.6px 1.6px at 58% 26%, rgba(255,235,190,.80), transparent),
+    radial-gradient(1.1px 1.1px at 74% 72%, rgba(255,255,255,.50), transparent),
+    radial-gradient(1.3px 1.3px at 88% 38%, rgba(255,255,255,.62), transparent),
+    radial-gradient(1px 1px at 22% 84%, rgba(255,255,255,.45), transparent),
+    radial-gradient(1.5px 1.5px at 46% 92%, rgba(255,235,190,.55), transparent);
+  opacity: .85;
+}
+
+/* ───────── 공통 ───────── */
+button { font-family: inherit; }
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .15s ease, transform .1s ease, border-color .15s ease;
+}
+.btn:hover { background: rgba(255, 255, 255, 0.11); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.btn-primary {
+  background: linear-gradient(180deg, #ffe39a, var(--star-dim));
+  border-color: transparent;
+  color: #2a2210;
+  font-weight: 700;
+}
+.btn-primary:hover { background: linear-gradient(180deg, #ffeab2, #d4b565); }
+
+.btn-ghost { background: transparent; border-color: var(--line); color: var(--ink-soft); }
+
+.muted { color: var(--ink-mute); font-weight: 400; }
+.form-error { color: var(--rose); min-height: 1.4em; font-size: 13px; margin: 8px 0 0; }
+
+input, select, textarea {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.30);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  padding: 11px 13px;
+  font-family: inherit;
+  font-size: 15px;
+}
+input:focus, select:focus, textarea:focus {
+  outline: 2px solid rgba(255, 217, 125, 0.55);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+textarea { resize: vertical; min-height: 110px; line-height: 1.7; }
+
+/* ───────── 로그인 ───────── */
+.gate {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+}
+.gate-card {
+  width: min(420px, 100%);
+  background: rgba(19, 26, 51, 0.72);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  padding: 32px 26px 26px;
+}
+.brand {
+  font-family: var(--serif);
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  margin: 0;
+  text-align: center;
+  background: linear-gradient(180deg, #fff6dd, var(--star));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.brand-sub {
+  text-align: center;
+  color: var(--ink-mute);
+  font-size: 13px;
+  margin: 6px 0 22px;
+  letter-spacing: .06em;
+}
+.tabs-inline {
+  display: flex;
+  gap: 6px;
+  background: rgba(0,0,0,.28);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 20px;
+}
+.tab-inline {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: var(--ink-mute);
+  padding: 9px;
+  border-radius: 9px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.tab-inline.is-active { background: rgba(255,255,255,.10); color: var(--ink); font-weight: 600; }
+
+.gate-form { display: grid; gap: 14px; }
+.gate-form label { display: grid; gap: 6px; font-size: 13px; color: var(--ink-soft); }
+.gate-form small { color: var(--ink-mute); font-size: 11.5px; }
+
+/* ───────── 상단바 / 탭바 ───────── */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px calc(14px + env(safe-area-inset-top, 0px));
+  padding-top: max(14px, env(safe-area-inset-top, 0px));
+  background: linear-gradient(180deg, rgba(7,10,24,.95), rgba(7,10,24,.72) 70%, transparent);
+  backdrop-filter: blur(8px);
+}
+.topbar-title {
+  font-family: var(--serif);
+  font-size: 19px;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: .05em;
+}
+.topbar-right { display: flex; gap: 8px; }
+.badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.05);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.badge-point { color: var(--star); border-color: rgba(255,217,125,.32); }
+
+main { padding: 4px 16px calc(var(--tabbar-h) + 32px); max-width: 720px; margin: 0 auto; }
+
+.tabbar {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  background: rgba(11, 16, 33, 0.94);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.tab {
+  border: 0;
+  background: transparent;
+  color: var(--ink-mute);
+  font-size: 11px;
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  padding: 9px 0 8px;
+  height: var(--tabbar-h);
+  cursor: pointer;
+}
+.tab span { font-size: 19px; line-height: 1.1; filter: grayscale(.55) opacity(.75); }
+.tab.is-active { color: var(--star); }
+.tab.is-active span { filter: none; }
+
+.section-title {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  color: var(--ink-soft);
+  margin: 26px 0 12px;
+}
+
+/* ───────── 시 카드 ───────── */
+.poem-card {
+  background: linear-gradient(165deg, rgba(28,36,68,.85), rgba(13,18,38,.88));
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 26px 22px;
+  box-shadow: var(--shadow);
+  margin-top: 8px;
+}
+.poem-eyebrow {
+  font-size: 11.5px;
+  letter-spacing: .16em;
+  color: var(--star-dim);
+  text-transform: uppercase;
+  margin: 0 0 8px;
+}
+.poem-title {
+  font-family: var(--serif);
+  font-size: 26px;
+  font-weight: 800;
+  margin: 0 0 4px;
+  letter-spacing: .02em;
+}
+.poem-meta { font-size: 12px; color: var(--ink-mute); margin: 0 0 18px; }
+.poem-body { font-family: var(--serif); font-size: 17px; line-height: 2.0; letter-spacing: .01em; }
+.poem-body .stanza { margin: 0 0 1.5em; white-space: pre-wrap; }
+.poem-body .stanza:last-child { margin-bottom: 0; }
+.poem-body.is-prose .stanza { text-indent: 1em; line-height: 1.95; }
+
+.poem-note {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--line);
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  line-height: 1.8;
+}
+.poem-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.chip {
+  font-size: 11.5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--ink-mute);
+}
+
+/* ───────── 미션 ───────── */
+.mission-list { display: grid; gap: 12px; }
+.mission {
+  background: rgba(19, 26, 51, 0.66);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  transition: border-color .2s ease;
+}
+.mission.is-done { border-color: rgba(127, 209, 174, .34); background: rgba(19, 40, 38, .40); }
+.mission-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.mission-title { font-weight: 700; font-size: 15px; margin: 0; }
+.mission-points { font-size: 12px; color: var(--star); white-space: nowrap; }
+.mission-kind {
+  display: inline-block;
+  font-size: 10.5px;
+  letter-spacing: .1em;
+  color: var(--ink-mute);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-right: 8px;
+  vertical-align: 2px;
+}
+.mission-prompt { color: var(--ink-soft); font-size: 14px; margin: 10px 0 14px; line-height: 1.75; }
+.mission-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.mission-hint { font-size: 12px; color: var(--ink-mute); }
+
+.choices { display: grid; gap: 8px; margin-bottom: 12px; }
+.choice {
+  text-align: left;
+  border: 1px solid var(--line);
+  background: rgba(0,0,0,.24);
+  color: var(--ink);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+.choice:hover { background: rgba(255,255,255,.07); }
+.choice.is-selected { border-color: var(--star); background: rgba(255,217,125,.10); }
+.choice.is-correct { border-color: var(--leaf); background: rgba(127,209,174,.14); }
+.choice.is-wrong { border-color: var(--rose); background: rgba(255,154,168,.12); }
+.choice:disabled { cursor: default; }
+
+.mission-result { font-size: 13px; margin: 10px 0 0; line-height: 1.7; }
+.mission-result.ok { color: var(--leaf); }
+.mission-result.no { color: var(--rose); }
+.mission-submission {
+  white-space: pre-wrap;
+  font-family: var(--serif);
+  font-size: 14.5px;
+  line-height: 1.9;
+  background: rgba(0,0,0,.24);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin: 10px 0 0;
+  color: var(--ink-soft);
+}
+
+.done-note {
+  margin-top: 18px;
+  text-align: center;
+  font-family: var(--serif);
+  font-size: 15px;
+  color: var(--leaf);
+  border: 1px dashed rgba(127,209,174,.34);
+  border-radius: var(--radius);
+  padding: 18px;
+  line-height: 1.9;
+}
+
+/* ───────── 시집 ───────── */
+.poem-list { display: grid; gap: 10px; }
+.poem-item {
+  width: 100%;
+  text-align: left;
+  display: grid;
+  gap: 4px;
+  background: rgba(19, 26, 51, 0.60);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  cursor: pointer;
+  color: inherit;
+}
+.poem-item:hover { background: rgba(28, 36, 68, 0.78); }
+.poem-item-title { font-family: var(--serif); font-size: 16.5px; font-weight: 700; }
+.poem-item-title .read-dot { color: var(--leaf); font-size: 12px; margin-left: 6px; }
+.poem-item-preview { font-size: 12.5px; color: var(--ink-mute); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.sheet {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  max-width: 640px;
+  width: calc(100% - 28px);
+}
+.sheet::backdrop { background: rgba(3, 5, 12, .82); backdrop-filter: blur(3px); }
+.sheet > div { max-height: 76dvh; overflow-y: auto; }
+.sheet form { text-align: center; padding: 14px 0 6px; }
+
+/* ───────── 방 / 채팅 ───────── */
+.empty { text-align: center; color: var(--ink-soft); padding: 30px 0; display: grid; gap: 16px; }
+.inline-form { display: flex; gap: 8px; }
+.inline-form input { flex: 1; }
+
+.room-header { display: flex; gap: 8px; align-items: center; margin: 8px 0 12px; }
+.room-header select { flex: 1; }
+
+.chat-log {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  height: calc(100dvh - var(--tabbar-h) - 210px);
+  min-height: 280px;
+  overflow-y: auto;
+  padding: 4px 2px 8px;
+  scrollbar-width: thin;
+}
+.msg { display: grid; gap: 4px; max-width: 86%; }
+.msg.is-mine { justify-self: end; }
+.msg-author { font-size: 11.5px; color: var(--ink-mute); padding: 0 4px; }
+.msg-bubble {
+  background: rgba(28, 36, 68, .82);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.msg.is-mine .msg-bubble { background: rgba(255, 217, 125, .13); border-color: rgba(255,217,125,.26); }
+
+.msg.is-bot { max-width: 100%; justify-self: stretch; }
+.msg.is-bot .msg-bubble {
+  background: rgba(10, 16, 34, .72);
+  border-style: dashed;
+  color: var(--ink-soft);
+  font-size: 13.5px;
+  text-align: center;
+}
+.msg.is-bot[data-kind='challenge'] .msg-bubble { color: var(--star); border-color: rgba(255,217,125,.34); }
+.msg.is-bot[data-kind='poem'] .msg-bubble { font-family: var(--serif); font-size: 14.5px; line-height: 1.9; }
+
+.msg-share-tag {
+  display: block;
+  font-size: 11px;
+  color: var(--star-dim);
+  margin-bottom: 6px;
+  letter-spacing: .04em;
+}
+.msg-cheers { display: flex; gap: 6px; padding: 2px 4px; flex-wrap: wrap; }
+.cheer-btn {
+  border: 1px solid var(--line);
+  background: rgba(0,0,0,.28);
+  color: var(--ink-soft);
+  border-radius: 999px;
+  font-size: 12px;
+  padding: 2px 9px;
+  cursor: pointer;
+  line-height: 1.7;
+}
+.cheer-btn.is-on { border-color: rgba(255,217,125,.55); background: rgba(255,217,125,.14); color: var(--star); }
+
+.chat-form { display: flex; gap: 8px; padding-top: 10px; }
+.chat-form input { flex: 1; }
+
+/* ───────── 랭킹 ───────── */
+.segmented {
+  display: flex;
+  gap: 4px;
+  background: rgba(0,0,0,.28);
+  border-radius: 10px;
+  padding: 4px;
+  margin-bottom: 10px;
+}
+.segmented button {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: var(--ink-mute);
+  padding: 8px;
+  border-radius: 7px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.segmented button.is-active { background: rgba(255,255,255,.10); color: var(--ink); font-weight: 600; }
+
+.ranking-list { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
+.rank-row {
+  display: grid;
+  grid-template-columns: 38px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  background: rgba(19, 26, 51, .58);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 11px 14px;
+}
+.rank-row.is-me { border-color: rgba(255,217,125,.45); background: rgba(255,217,125,.09); }
+.rank-no { font-family: var(--serif); font-size: 17px; font-weight: 800; color: var(--ink-mute); text-align: center; }
+.rank-row:nth-child(1) .rank-no { color: var(--star); }
+.rank-row:nth-child(2) .rank-no { color: #d8def0; }
+.rank-row:nth-child(3) .rank-no { color: #d9a878; }
+.rank-name { font-weight: 500; }
+.rank-points { color: var(--star); font-size: 13px; font-weight: 600; }
+.rank-me { text-align: center; color: var(--ink-mute); font-size: 13px; margin-top: 14px; }
+
+/* ───────── 나 ───────── */
+.me-summary {
+  background: rgba(19, 26, 51, .66);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-top: 10px;
+}
+.me-name { font-family: var(--serif); font-size: 21px; font-weight: 800; margin: 0 0 14px; }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 12px; }
+.stat { text-align: center; }
+.stat-value { font-family: var(--serif); font-size: 22px; font-weight: 800; color: var(--star); }
+.stat-label { font-size: 11.5px; color: var(--ink-mute); }
+
+.activity-strip { display: flex; gap: 3px; margin-top: 18px; justify-content: space-between; }
+.activity-cell { flex: 1; height: 26px; border-radius: 3px; background: rgba(255,255,255,.05); }
+.activity-cell[data-level='1'] { background: rgba(255,217,125,.25); }
+.activity-cell[data-level='2'] { background: rgba(255,217,125,.50); }
+.activity-cell[data-level='3'] { background: rgba(255,217,125,.82); }
+
+.challenge-board { display: grid; gap: 18px; }
+.challenge-group-name { font-size: 12px; letter-spacing: .12em; color: var(--ink-mute); margin: 0 0 8px; }
+.challenge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.challenge {
+  background: rgba(19, 26, 51, .55);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  display: grid;
+  gap: 4px;
+  opacity: .6;
+}
+.challenge.is-earned { opacity: 1; border-color: rgba(255,217,125,.42); background: rgba(255,217,125,.08); }
+.challenge-icon { font-size: 20px; }
+.challenge-title { font-size: 13.5px; font-weight: 700; }
+.challenge-desc { font-size: 11.5px; color: var(--ink-mute); line-height: 1.55; }
+.challenge-bar { height: 3px; border-radius: 2px; background: rgba(255,255,255,.10); overflow: hidden; margin-top: 4px; }
+.challenge-bar i { display: block; height: 100%; background: var(--star); }
+
+.push-panel {
+  background: rgba(19, 26, 51, .60);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+}
+.switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; }
+.switch-row input { width: auto; }
+.push-note { font-size: 12.5px; color: var(--ink-mute); line-height: 1.7; margin: 0; }
+.me-footer { margin: 30px 0 10px; text-align: center; }
+
+/* ───────── 토스트 ───────── */
+.toasts {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--tabbar-h) + 18px);
+  z-index: 50;
+  display: grid;
+  gap: 8px;
+  width: min(420px, calc(100% - 32px));
+  pointer-events: none;
+}
+.toast {
+  background: rgba(28, 36, 68, .96);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  box-shadow: var(--shadow);
+  animation: rise .25s ease-out;
+}
+.toast.is-star { border-color: rgba(255,217,125,.5); color: var(--star); }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+@media (min-width: 760px) {
+  .chat-log { height: calc(100dvh - var(--tabbar-h) - 240px); }
+}

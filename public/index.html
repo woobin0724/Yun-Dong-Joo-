@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>별 헤는 밤 — 윤동주 읽기</title>
+<meta name="description" content="윤동주의 시를 매일 한 편씩 읽고, 미션을 함께 수행하며, 방 안에서 감상을 나누는 교육용 앱." />
+<meta name="theme-color" content="#0b1021" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/icons/icon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<div class="sky" aria-hidden="true"></div>
+
+<!-- ───────── 로그인 / 가입 ───────── -->
+<section id="gate" class="gate" hidden>
+  <div class="gate-card">
+    <h1 class="brand">별 헤는 밤</h1>
+    <p class="brand-sub">윤동주를 매일 한 편씩</p>
+
+    <div class="tabs-inline" role="tablist">
+      <button class="tab-inline is-active" data-gate-tab="login" role="tab">로그인</button>
+      <button class="tab-inline" data-gate-tab="signup" role="tab">처음이에요</button>
+    </div>
+
+    <form id="login-form" class="gate-form">
+      <label>아이디<input name="handle" autocomplete="username" required /></label>
+      <label>PIN<input name="pin" type="password" inputmode="numeric" autocomplete="current-password" required /></label>
+      <button class="btn btn-primary" type="submit">들어가기</button>
+    </form>
+
+    <form id="signup-form" class="gate-form" hidden>
+      <label>아이디<input name="handle" autocomplete="username" required />
+        <small>한글·영문·숫자 2~20자</small></label>
+      <label>이름<input name="displayName" autocomplete="nickname" required />
+        <small>방에서 보일 이름입니다</small></label>
+      <label>PIN<input name="pin" type="password" inputmode="numeric" autocomplete="new-password" required />
+        <small>숫자 4~12자리</small></label>
+      <button class="btn btn-primary" type="submit">시작하기</button>
+    </form>
+
+    <p id="gate-error" class="form-error" role="alert"></p>
+  </div>
+</section>
+
+<!-- ───────── 본 화면 ───────── -->
+<div id="app" hidden>
+  <header class="topbar">
+    <h1 class="topbar-title">별 헤는 밤</h1>
+    <div class="topbar-right">
+      <span id="streak-badge" class="badge" title="연속 달성일"></span>
+      <span id="points-badge" class="badge badge-point" title="누적 점수"></span>
+    </div>
+  </header>
+
+  <main id="views">
+    <!-- 오늘 -->
+    <section class="view" data-view="today">
+      <div id="today-poem" class="poem-card"></div>
+      <h2 class="section-title">오늘의 미션</h2>
+      <div id="mission-list" class="mission-list"></div>
+      <div id="today-done" class="done-note" hidden></div>
+    </section>
+
+    <!-- 시집 -->
+    <section class="view" data-view="library" hidden>
+      <h2 class="section-title">시집 <span id="library-count" class="muted"></span></h2>
+      <div id="poem-list" class="poem-list"></div>
+    </section>
+
+    <!-- 방 -->
+    <section class="view" data-view="room" hidden>
+      <div id="room-empty" class="empty" hidden>
+        <p>아직 들어간 방이 없습니다.<br />방을 만들거나 초대 코드로 들어가 보세요.</p>
+        <form id="create-room-form" class="inline-form">
+          <input name="name" placeholder="방 이름 (예: 3학년 2반)" required />
+          <button class="btn btn-primary" type="submit">방 만들기</button>
+        </form>
+        <form id="join-room-form" class="inline-form">
+          <input name="code" placeholder="초대 코드" autocapitalize="characters" required />
+          <button class="btn" type="submit">들어가기</button>
+        </form>
+        <p id="room-error" class="form-error" role="alert"></p>
+      </div>
+
+      <div id="room-main" hidden>
+        <div class="room-header">
+          <select id="room-picker" aria-label="방 선택"></select>
+          <button id="room-info-btn" class="btn btn-ghost" type="button">방 정보</button>
+        </div>
+        <div id="chat-log" class="chat-log" aria-live="polite"></div>
+        <form id="chat-form" class="chat-form">
+          <input id="chat-input" placeholder="감상을 나눠 보세요" autocomplete="off" maxlength="2000" />
+          <button class="btn btn-primary" type="submit">보내기</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- 랭킹 -->
+    <section class="view" data-view="ranking" hidden>
+      <h2 class="section-title">랭킹</h2>
+      <div class="segmented" id="ranking-scope">
+        <button class="is-active" data-scope="room">우리 방</button>
+        <button data-scope="all">전체</button>
+      </div>
+      <div class="segmented" id="ranking-period">
+        <button class="is-active" data-period="week">이번 주</button>
+        <button data-period="month">이번 달</button>
+        <button data-period="all">전체 기간</button>
+      </div>
+      <ol id="ranking-list" class="ranking-list"></ol>
+      <p id="ranking-me" class="rank-me"></p>
+    </section>
+
+    <!-- 나 -->
+    <section class="view" data-view="me" hidden>
+      <div id="me-summary" class="me-summary"></div>
+      <h2 class="section-title">도전과제</h2>
+      <div id="challenge-board" class="challenge-board"></div>
+
+      <h2 class="section-title">알림</h2>
+      <div id="push-panel" class="push-panel"></div>
+
+      <div class="me-footer">
+        <button id="logout-btn" class="btn btn-ghost" type="button">로그아웃</button>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar" role="tablist">
+    <button class="tab is-active" data-view="today"><span>🌙</span>오늘</button>
+    <button class="tab" data-view="library"><span>📖</span>시집</button>
+    <button class="tab" data-view="room"><span>💬</span>방</button>
+    <button class="tab" data-view="ranking"><span>🏅</span>랭킹</button>
+    <button class="tab" data-view="me"><span>✨</span>나</button>
+  </nav>
+</div>
+
+<!-- 시 전문 보기 -->
+<dialog id="poem-dialog" class="sheet">
+  <div id="poem-dialog-body"></div>
+  <form method="dialog"><button class="btn btn-ghost">닫기</button></form>
+</dialog>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
+
+<script type="module" src="/app.js"></script>
+</body>
+</html>

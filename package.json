@@ -1,0 +1,21 @@
+{
+  "name": "byeol-heneun-bam",
+  "version": "0.1.0",
+  "private": true,
+  "description": "윤동주 시인 교육용 웹앱 — 정기 시 알림, 일일 미션, 도전과제, 응원 채팅, 랭킹",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test \"test/*.test.js\"",
+    "keys": "node scripts/generate-vapid.js",
+    "seed": "node scripts/seed-demo.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "web-push": "^3.6.7"
+  }
+}
