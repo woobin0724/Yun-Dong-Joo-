@@ -55,6 +55,21 @@ OFL 1.1 요건 중 이 앱에 해당하는 것:
 
 외부 아이콘 라이브러리를 쓰지 않았습니다. 전부 이 저장소에서 그린 SVG 입니다.
 
+---
+
+## 개발 도구 — Impeccable
+
+- **무엇**: AI가 만든 프론트엔드의 디자인 안티패턴을 잡는 탐지기 + Claude Code 스킬
+- **출처**: https://github.com/pbakaus/impeccable (Paul Bakaus)
+- **라이선스**: Apache License 2.0
+- **저장 위치**: `.claude/skills/impeccable/`, `.claude/agents/impeccable-*.md`
+  — 이 파일들은 **원 저장소의 산출물이며 우리가 쓴 코드가 아닙니다.**
+- **CLI/바이너리**: npm devDependency (`impeccable`). 저장소에는 올라가지 않습니다.
+- 자세한 설치 경위와 주의점은 [`impeccable.md`](./impeccable.md) 참고.
+
+Apache-2.0 은 저작권·라이선스 고지를 함께 두기를 요구합니다.
+원 저장소의 `LICENSE` 와 `NOTICE.md` 내용은 위 링크에서 확인할 수 있습니다.
+
 **마스코트에 관한 원칙**: 마스코트는 **별을 의인화한 도형**입니다.
 윤동주 본인의 얼굴을 캐릭터로 만들거나 사진을 쓰지 않습니다.
 실존 인물의 초상을 쓰려면 별도의 권리 확인이 필요하기 때문입니다.

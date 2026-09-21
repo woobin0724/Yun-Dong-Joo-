@@ -18,13 +18,15 @@
     "icons": "node scripts/make-icons.js",
     "fonts": "node scripts/fetch-fonts.js",
     "fake-google": "node scripts/fake-google-server.js",
-    "verify:google": "node scripts/verify-google-login.js"
+    "verify:google": "node scripts/verify-google-login.js",
+    "design:check": "impeccable detect public/"
   },
   "dependencies": {
     "express": "^5.1.0",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "impeccable": "^4.1.0",
     "playwright": "^1.63.0"
   }
 }

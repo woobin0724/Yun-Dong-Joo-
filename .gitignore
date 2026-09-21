@@ -10,3 +10,6 @@ screenshots/
 
 # 글꼴은 커밋합니다 (자체 호스팅이 목적).
 # 다시 받으려면: npm run fonts
+
+# Claude Code 개인 설정 (팀 공용 설정은 .claude/settings.json)
+.claude/settings.local.json
