@@ -1,0 +1,9 @@
+<!-- maskable — 안전 영역(중앙 80%) 안에만 그림을 둡니다. 모서리가 잘려도 괜찮게. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#0b1322"/>
+  <g transform="translate(256 256) scale(0.66) translate(-256 -256)">
+    <path d="M256 92l30.4 61.6 68 9.9-49.2 48 11.6 67.7L256 247.2l-60.8 32-11.6-67.7-49.2-48 68-9.9z" fill="#f0c661"/>
+    <path d="M256 286l44 80-44 84-44-84z" fill="#eae7dd"/>
+    <circle cx="256" cy="352" r="14" fill="#0b1322"/>
+  </g>
+</svg>

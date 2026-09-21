@@ -1,0 +1,30 @@
+{
+  "description": "Impeccable 자동 검사를 켜려면 이 파일을 .claude/settings.json 으로 복사하세요. UI 파일을 고친 뒤(Edit/Write)와 턴이 끝날 때(Stop) 탐지기가 돕니다. 끄려면 .claude/settings.json 을 지우면 됩니다.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ ! -x \"${CLAUDE_PROJECT_DIR}/node_modules/.bin/impeccable\" ] || IMPECCABLE_BIN=\"${CLAUDE_PROJECT_DIR}/node_modules/.bin/impeccable\" \"${CLAUDE_PROJECT_DIR}/.claude/skills/impeccable/scripts/impeccable\" hook",
+            "timeout": 5,
+            "statusMessage": "UI 변경 검사"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ ! -x \"${CLAUDE_PROJECT_DIR}/node_modules/.bin/impeccable\" ] || IMPECCABLE_BIN=\"${CLAUDE_PROJECT_DIR}/node_modules/.bin/impeccable\" \"${CLAUDE_PROJECT_DIR}/.claude/skills/impeccable/scripts/impeccable\" hook",
+            "timeout": 30,
+            "statusMessage": "디자인 전체 검사"
+          }
+        ]
+      }
+    ]
+  }
+}
