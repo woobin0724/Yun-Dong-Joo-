@@ -6,3 +6,7 @@ data/*.db-shm
 .env
 .env.local
 *.log
+screenshots/
+
+# 글꼴은 커밋합니다 (자체 호스팅이 목적).
+# 다시 받으려면: npm run fonts

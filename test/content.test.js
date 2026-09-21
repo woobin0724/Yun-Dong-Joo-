@@ -151,3 +151,24 @@ test('poemPreview 는 너무 길어지지 않는다', () => {
 test('POEM_BY_ID 로 모든 시를 찾을 수 있다', () => {
   for (const poem of POEMS) assert.equal(POEM_BY_ID.get(poem.id), poem);
 });
+
+test('도전과제 아이콘이 모두 스프라이트에 정의되어 있다', async () => {
+  const fs = await import('node:fs');
+  const html = fs.readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
+  const defined = new Set([...html.matchAll(/<symbol id="i-([^"]+)"/g)].map((m) => m[1]));
+
+  for (const c of CHALLENGES) {
+    assert.ok(defined.has(c.icon), `${c.id}: 스프라이트에 '${c.icon}' 아이콘이 없습니다`);
+  }
+});
+
+test('사용자에게 나가는 문구에 이모지를 쓰지 않는다', async () => {
+  // 이모지는 기기마다 모양이 달라 통일감을 깨고, 푸시 알림 제목에까지 섞여 들어갑니다.
+  const fs = await import('node:fs');
+  const pictographic = /\p{Extended_Pictographic}/u;
+  for (const file of ['content/challenges.js', 'content/messages.js', 'services/activity.js']) {
+    const source = fs.readFileSync(new URL(`../src/${file}`, import.meta.url), 'utf8');
+    const found = source.split('\n').find((line) => pictographic.test(line));
+    assert.equal(found, undefined, `src/${file} 에 이모지가 남아 있습니다: ${found}`);
+  }
+});

@@ -94,7 +94,7 @@ export async function completeMission({ userId, missionId, answer = null, text =
     await sendToUser(
       userId,
       {
-        title: `${challenge.icon} ${challenge.title}`,
+        title: `도전과제 달성 — ${challenge.title}`,
         body: `${challenge.description} (+${challenge.reward}점)`,
         tag: `challenge-${challenge.id}`,
         url: '/#challenges',

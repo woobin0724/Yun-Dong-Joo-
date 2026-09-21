@@ -35,12 +35,16 @@ const CHALLENGE_LINES = [
   '{name} 님의 이름 옆에 「{title}」{iGa} 붙었습니다. {desc}',
 ];
 
-/** 응원(이모지 리액션)을 받았을 때 붙는 짧은 말 */
+/**
+ * 응원의 종류. 넷 다 윤동주의 시에 나오는 심상에서 가져왔다.
+ * icon 은 화면의 아이콘 스프라이트 이름이다 (이모지를 쓰지 않는다 —
+ * 기기마다 모양이 달라 통일감이 깨지기 때문).
+ */
 export const CHEER_LABELS = [
-  { key: 'star', emoji: '⭐', label: '별 하나' },
-  { key: 'heart', emoji: '💛', label: '마음' },
-  { key: 'leaf', emoji: '🍃', label: '잎새' },
-  { key: 'clap', emoji: '👏', label: '박수' },
+  { key: 'star', icon: 'star', label: '별 하나' },
+  { key: 'heart', icon: 'heart', label: '마음' },
+  { key: 'leaf', icon: 'leaf', label: '잎새' },
+  { key: 'sparkle', icon: 'sparkle', label: '반짝임' },
 ];
 
 export const CHEER_BY_KEY = new Map(CHEER_LABELS.map((c) => [c.key, c]));
@@ -107,6 +111,6 @@ export function weeklyWrapMessage({ top }) {
   if (!top.length) return '이번 주는 기록이 없습니다. 다음 주에 다시 시작해요.';
   const lines = top
     .slice(0, 3)
-    .map((r, i) => `${['🥇', '🥈', '🥉'][i]} ${r.displayName} ${r.points}점`);
+    .map((r, i) => `${i + 1}위  ${r.displayName}  ${r.points}점`);
   return ['한 주가 마감되었습니다.', ...lines, '다음 주 점수는 0에서 다시 시작합니다.'].join('\n');
 }

@@ -49,6 +49,18 @@ authRouter.post('/logout', (req, res) => {
   res.json({ ok: true });
 });
 
+/**
+ * 이 서버가 켜 둔 로그인 수단.
+ * 구글 자격증명이 없으면 화면에 구글 버튼을 띄우지 않는다 —
+ * 눌러도 안 되는 버튼을 보여 주지 않기 위해서다.
+ */
+authRouter.get('/providers', (_req, res) => {
+  res.json({
+    password: true,
+    google: Boolean(config.google?.clientId && config.google?.clientSecret),
+  });
+});
+
 authRouter.get('/me', requireAuth, (req, res) => {
   res.json({ user: req.user });
 });

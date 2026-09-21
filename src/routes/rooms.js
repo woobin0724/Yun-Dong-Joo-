@@ -12,7 +12,8 @@ import { listMessages, postMessage, toggleCheer, postBotMessage } from '../servi
 import { refreshChallenges } from '../services/activity.js';
 import { subscribe } from '../lib/bus.js';
 import { leaderboard, rankOf } from '../services/points.js';
-import { requireAuth, asyncRoute } from './middleware.js';
+import { requireAuth, asyncRoute, rateLimit } from './middleware.js';
+import { config } from '../config.js';
 import { AppError } from '../services/users.js';
 import { memberJoinedMessage } from '../content/messages.js';
 
@@ -40,8 +41,15 @@ roomsRouter.post(
   }),
 );
 
+// 초대 코드는 6자리뿐이라, 제한이 없으면 남의 방을 찾아낼 수 있다.
+const joinLimit = rateLimit({
+  ...config.joinRateLimit,
+  key: (req) => `join:${req.user?.id ?? req.ip}`,
+});
+
 roomsRouter.post(
   '/join',
+  joinLimit,
   asyncRoute((req, res) => {
     const { room, joined } = joinRoomByCode({ code: req.body?.code, userId: req.user.id });
     if (joined) {

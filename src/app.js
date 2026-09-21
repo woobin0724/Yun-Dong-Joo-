@@ -4,6 +4,7 @@ import express from 'express';
 import { config } from './config.js';
 import { getDb } from './db.js';
 import { cookieMiddleware, attachUser, errorHandler } from './routes/middleware.js';
+import { securityHeaders } from './routes/security.js';
 import { authRouter } from './routes/auth.js';
 import { poemsRouter } from './routes/poems.js';
 import { missionsRouter } from './routes/missions.js';
@@ -20,6 +21,7 @@ export function createApp() {
 
   const app = express();
   app.set('trust proxy', 1);
+  app.use(securityHeaders);
   app.use(express.json({ limit: '128kb' }));
   app.use(cookieMiddleware);
   app.use(attachUser);

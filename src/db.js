@@ -173,6 +173,14 @@ const MIGRATIONS = [
       );
     `,
   },
+  {
+    name: '002-cheer-sparkle',
+    sql: `
+      -- 응원 아이콘을 이모지에서 커스텀 SVG 로 바꾸면서
+      -- 그리기 어려운 '손뼉'을 시의 심상에 맞는 '반짝임'으로 바꿨다.
+      UPDATE cheers SET kind = 'sparkle' WHERE kind = 'clap';
+    `,
+  },
 ];
 
 function applyMigrations(database) {

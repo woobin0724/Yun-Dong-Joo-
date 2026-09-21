@@ -23,7 +23,11 @@ function loadDotEnv(file = '.env') {
   }
 }
 
-loadDotEnv();
+const isTestEnv = process.env.NODE_ENV === 'test';
+
+// 테스트는 저장소에 있는 .env 에 영향을 받으면 안 된다.
+// (로컬에서는 통과하는데 CI 에서만 깨지는 문제의 단골 원인)
+if (!isTestEnv) loadDotEnv();
 
 const bool = (v, fallback) =>
   v === undefined ? fallback : ['1', 'true', 'yes', 'on'].includes(String(v).toLowerCase());
@@ -37,9 +41,10 @@ const hours = (v, fallback) => {
   return parsed.length ? parsed : fallback;
 };
 
-const isTest = process.env.NODE_ENV === 'test';
+const isTest = isTestEnv;
 
 export const config = {
+  isProduction: process.env.NODE_ENV === 'production',
   port: Number(process.env.PORT || 3000),
   timezone: process.env.APP_TIMEZONE || 'Asia/Seoul',
   dbPath: process.env.DB_PATH || (isTest ? ':memory:' : './data/app.db'),
@@ -56,6 +61,17 @@ export const config = {
   authRateLimit: {
     windowMs: 5 * 60_000,
     max: Number(process.env.AUTH_RATE_LIMIT_MAX || (isTest ? 100_000 : 20)),
+  },
+  // 초대 코드 무차별 대입 방지. 사람은 코드를 몇 번씩 잘못 치지 않는다.
+  joinRateLimit: {
+    windowMs: 10 * 60_000,
+    max: Number(process.env.JOIN_RATE_LIMIT_MAX || (isTest ? 100_000 : 10)),
+  },
+  // 구글 로그인 (Phase 2 에서 연결). 값이 없으면 로그인 화면에 버튼이 뜨지 않는다.
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID || '',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+    redirectUri: process.env.GOOGLE_REDIRECT_URI || '',
   },
   missionPublishHour: Number(process.env.MISSION_PUBLISH_HOUR ?? 6),
   poemPushHours: hours(process.env.POEM_PUSH_HOURS, [8, 21]),

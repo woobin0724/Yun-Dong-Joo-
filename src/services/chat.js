@@ -150,7 +150,7 @@ function cheersFor(messageIds) {
     if (!map.has(id)) map.set(id, []);
     map.get(id).push({
       kind: row.kind,
-      emoji: CHEER_BY_KEY.get(row.kind)?.emoji ?? '👏',
+      label: CHEER_BY_KEY.get(row.kind)?.label ?? row.kind,
       count: Number(row.n),
       userIds: String(row.user_ids || '')
         .split(',')

@@ -12,10 +12,17 @@
     "dev": "node --watch src/server.js",
     "test": "node --test \"test/*.test.js\"",
     "keys": "node scripts/generate-vapid.js",
-    "seed": "node scripts/seed-demo.js"
+    "seed": "node scripts/seed-demo.js",
+    "shots": "node scripts/screenshot.js",
+    "contrast": "node scripts/check-contrast.js",
+    "icons": "node scripts/make-icons.js",
+    "fonts": "node scripts/fetch-fonts.js"
   },
   "dependencies": {
     "express": "^5.1.0",
     "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
   }
 }

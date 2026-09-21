@@ -1,15 +1,24 @@
 /* 별 헤는 밤 — 프런트엔드
-   빌드 도구 없이 동작하도록 표준 ES 모듈 하나로 작성했습니다. */
+   빌드 도구 없이 도는 표준 ES 모듈 하나입니다. */
 
 // ───────── 작은 도우미 ─────────
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
-/** 사용자 입력이 섞여도 안전하도록 텍스트는 항상 이 함수를 거쳐 넣는다. */
+/** 사용자 입력이 섞이는 자리에는 반드시 이 함수를 거칩니다. */
 const esc = (value) =>
   String(value ?? '').replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   })[c]);
+
+/** 인라인 스프라이트의 아이콘 하나를 꺼냅니다. */
+const icon = (name, cls = '') =>
+  `<svg class="icon ${cls}" aria-hidden="true"><use href="#i-${name}" /></svg>`;
+
+const mascot = (mood = 'default') =>
+  `<svg viewBox="0 0 64 64" aria-hidden="true"><use href="#m-${mood}" /></svg>`;
+
+const num = (n) => Number(n || 0).toLocaleString('ko-KR');
 
 async function api(path, { method = 'GET', body } = {}) {
   const res = await fetch(`/api${path}`, {
@@ -29,15 +38,30 @@ async function api(path, { method = 'GET', body } = {}) {
   return data;
 }
 
-function toast(message, { star = false, ms = 3800 } = {}) {
+function toast(message, { tone = '', iconName = '', ms = 4000 } = {}) {
   const el = document.createElement('div');
-  el.className = `toast${star ? ' is-star' : ''}`;
-  el.textContent = message;
+  el.className = 'toast';
+  if (tone) el.dataset.tone = tone;
+  el.innerHTML = iconName ? icon(iconName) : '';
+  el.append(document.createTextNode(message)); // 텍스트는 노드로 붙여 주입을 막습니다
   $('#toasts').append(el);
   setTimeout(() => el.remove(), ms);
 }
 
+const challengeToast = (c) =>
+  toast(`${c.title} — ${c.description}`, { tone: 'star', iconName: 'star', ms: 5000 });
+
+// 미션 갈래별 아이콘
+const KIND_ICON = { check: 'speak', text: 'pen', quiz: 'quiz' };
 const KIND_LABEL = { check: '낭독', text: '쓰기', quiz: '퀴즈' };
+
+// 응원 종류 — 전부 시의 심상에서 가져왔습니다.
+const CHEERS = [
+  { key: 'star', icon: 'star', label: '별 하나' },
+  { key: 'heart', icon: 'heart', label: '마음' },
+  { key: 'leaf', icon: 'leaf', label: '잎새' },
+  { key: 'sparkle', icon: 'sparkle', label: '반짝임' },
+];
 
 // ───────── 상태 ─────────
 const state = {
@@ -48,8 +72,36 @@ const state = {
   messages: [],
   eventSource: null,
   ranking: { scope: 'room', period: 'week' },
-  poems: [],
 };
+
+// ───────── 테마 · 글씨 크기 ─────────
+function currentTheme() {
+  return (
+    document.documentElement.dataset.theme ||
+    (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+  );
+}
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  try { localStorage.setItem('ydj.theme', theme); } catch {}
+  const btn = $('#theme-btn');
+  if (btn) {
+    btn.innerHTML = icon(theme === 'dark' ? 'sun' : 'moon');
+    btn.setAttribute('aria-label', theme === 'dark' ? '밝은 화면으로' : '어두운 화면으로');
+  }
+}
+
+$('#theme-btn').addEventListener('click', () =>
+  applyTheme(currentTheme() === 'dark' ? 'light' : 'dark'),
+);
+
+$('#textsize-select').addEventListener('change', (e) => {
+  const value = e.target.value;
+  if (value) document.documentElement.dataset.textsize = value;
+  else delete document.documentElement.dataset.textsize;
+  try { localStorage.setItem('ydj.textsize', value); } catch {}
+});
 
 // ───────── 로그인 ─────────
 function showGate() {
@@ -57,15 +109,20 @@ function showGate() {
   $('#app').hidden = true;
 }
 
-$$('[data-gate-tab]').forEach((btn) => {
+const gateTabs = [
+  { btn: $('#tab-login'), form: $('#login-form') },
+  { btn: $('#tab-signup'), form: $('#signup-form') },
+];
+for (const { btn } of gateTabs) {
   btn.addEventListener('click', () => {
-    const tab = btn.dataset.gateTab;
-    $$('[data-gate-tab]').forEach((b) => b.classList.toggle('is-active', b === btn));
-    $('#login-form').hidden = tab !== 'login';
-    $('#signup-form').hidden = tab !== 'signup';
+    for (const t of gateTabs) {
+      const on = t.btn === btn;
+      t.btn.setAttribute('aria-selected', String(on));
+      t.form.hidden = !on;
+    }
     $('#gate-error').textContent = '';
   });
-});
+}
 
 $('#login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -94,7 +151,7 @@ $('#signup-form').addEventListener('submit', async (e) => {
       },
     });
     await enterApp(user);
-    toast('반갑습니다. 오늘의 시부터 펼쳐 보세요.', { star: true });
+    toast('반갑습니다. 오늘의 시부터 펼쳐 보세요.', { tone: 'star', iconName: 'star' });
   } catch (err) {
     $('#gate-error').textContent = err.message;
   }
@@ -104,6 +161,20 @@ $('#logout-btn').addEventListener('click', async () => {
   await api('/auth/logout', { method: 'POST' });
   state.eventSource?.close();
   location.reload();
+});
+
+/** 서버가 켜 둔 로그인 수단만 보여 줍니다. */
+async function loadProviders() {
+  try {
+    const { google } = await api('/auth/providers');
+    $('#google-area').hidden = !google;
+  } catch {
+    $('#google-area').hidden = true;
+  }
+}
+
+$('#google-btn').addEventListener('click', () => {
+  location.href = '/api/auth/google/start';
 });
 
 async function enterApp(user) {
@@ -116,12 +187,14 @@ async function enterApp(user) {
 
 // ───────── 화면 전환 ─────────
 function switchView(name) {
-  const views = $$('[data-view]', $('#views'));
-  const known = views.some((v) => v.dataset.view === name);
-  const target = known ? name : 'today';
+  const views = $$('.view');
+  const target = views.some((v) => v.dataset.view === name) ? name : 'today';
 
-  views.forEach((v) => (v.hidden = v.dataset.view !== target));
-  $$('.tab').forEach((t) => t.classList.toggle('is-active', t.dataset.view === target));
+  for (const v of views) v.hidden = v.dataset.view !== target;
+  for (const t of $$('.tab')) {
+    if (t.dataset.view === target) t.setAttribute('aria-current', 'page');
+    else t.removeAttribute('aria-current');
+  }
   if (location.hash.slice(1) !== target) history.replaceState(null, '', `#${target}`);
 
   if (target === 'library') loadLibrary();
@@ -130,8 +203,8 @@ function switchView(name) {
   if (target === 'me') loadMe();
 }
 
-$$('.tab').forEach((tab) => tab.addEventListener('click', () => switchView(tab.dataset.view)));
-window.addEventListener('hashchange', () => switchView(location.hash.slice(1) || 'today'));
+for (const tab of $$('.tab')) tab.addEventListener('click', () => switchView(tab.dataset.view));
+addEventListener('hashchange', () => switchView(location.hash.slice(1) || 'today'));
 
 // ───────── 오늘 ─────────
 async function loadToday() {
@@ -142,43 +215,47 @@ async function loadToday() {
 function renderToday() {
   const { poem, missions, stats } = state.today;
 
-  $('#streak-badge').textContent = stats.streak > 0 ? `🔥 ${stats.streak}일 연속` : '오늘 시작';
-  $('#points-badge').textContent = `${stats.totalPoints.toLocaleString('ko-KR')}점`;
+  $('#streak-pill').innerHTML =
+    stats.streak > 0 ? `${icon('flame')}${stats.streak}일` : `${icon('flame')}오늘 시작`;
+  $('#points-pill').innerHTML = `${icon('star')}${num(stats.totalPoints)}`;
 
-  $('#today-poem').innerHTML = poemCardHtml(poem, { eyebrow: '오늘의 시' });
+  $('#today-poem').innerHTML = poemHtml(poem, { eyebrow: '오늘의 시' });
   $('#mission-list').innerHTML = missions.map(missionHtml).join('');
 
-  const remaining = missions.filter((m) => !m.completed).length;
-  const doneNote = $('#today-done');
-  doneNote.hidden = remaining > 0;
-  if (!remaining) {
-    doneNote.textContent =
-      stats.streak > 1
-        ? `오늘 몫을 다 읽었습니다. ${stats.streak}일째 이어 가는 중입니다.`
-        : '오늘 몫을 다 읽었습니다. 내일 또 한 편이 기다립니다.';
+  const left = missions.filter((m) => !m.completed).length;
+  $('#today-left').textContent = left ? `${left}개 남음` : '다 했습니다';
+
+  const done = $('#today-done');
+  done.hidden = left > 0;
+  if (!left) {
+    done.innerHTML =
+      mascot('happy').replace('<svg', '<svg style="width:44px;height:44px"') +
+      `<p style="margin:0">${
+        stats.streak > 1
+          ? `오늘 몫을 다 읽었습니다.<br>${stats.streak}일째 이어 가는 중입니다.`
+          : '오늘 몫을 다 읽었습니다.<br>내일 또 한 편이 기다립니다.'
+      }</p>`;
   }
 
-  bindMissionHandlers();
+  bindMissions();
   markPoemRead(poem.id);
 }
 
-function poemCardHtml(poem, { eyebrow = '' } = {}) {
+/** 원고지 조판. 연은 배열이고, 연 안의 행은 줄바꿈으로 유지합니다. */
+function poemHtml(poem, { eyebrow = '' } = {}) {
   const stanzas = poem.stanzas
     .map((lines) => `<p class="stanza">${esc(lines.join('\n'))}</p>`)
     .join('');
-  const tags = [...(poem.themes || [])]
-    .map((t) => `<span class="chip">${esc(t)}</span>`)
-    .join('');
+  const tags = (poem.themes || []).map((t) => `<span class="tag">${esc(t)}</span>`).join('');
   return `
     ${eyebrow ? `<p class="poem-eyebrow">${esc(eyebrow)}</p>` : ''}
     <h2 class="poem-title">${esc(poem.title)}${
-      poem.hanja ? ` <span class="muted" style="font-size:.6em">${esc(poem.hanja)}</span>` : ''
+      poem.hanja ? `<span class="hanja">${esc(poem.hanja)}</span>` : ''
     }</h2>
-    <p class="poem-meta">윤동주 · ${esc(formatWritten(poem.written))}</p>
+    <p class="poem-byline">윤동주 · ${esc(formatWritten(poem.written))}</p>
     <div class="poem-body${poem.form === 'prose' ? ' is-prose' : ''}">${stanzas}</div>
-    ${poem.note ? `<div class="poem-note">${esc(poem.note)}</div>` : ''}
-    <div class="poem-tags">${tags}</div>
-  `;
+    ${poem.note ? `<div class="poem-note"><b>읽기 도움말</b>${esc(poem.note)}</div>` : ''}
+    <div class="tag-row">${tags}</div>`;
 }
 
 function formatWritten(written) {
@@ -189,67 +266,69 @@ function formatWritten(written) {
 }
 
 function missionHtml(mission) {
-  const kindLabel = KIND_LABEL[mission.kind] || mission.kind;
   const head = `
     <div class="mission-head">
-      <h3 class="mission-title"><span class="mission-kind">${esc(kindLabel)}</span>${esc(mission.title)}</h3>
-      <span class="mission-points">+${mission.points}점</span>
+      <span class="mission-kind">${icon(
+        mission.completed ? 'check' : KIND_ICON[mission.kind] || 'quiz',
+      )}</span>
+      <h3 class="mission-title">${esc(mission.title)}</h3>
+      <span class="mission-points">+${mission.points}</span>
     </div>
     <p class="mission-prompt">${esc(mission.prompt)}</p>`;
 
   if (mission.completed) {
-    const reveal = mission.reveal?.explain
-      ? `<p class="mission-result ok">${esc(mission.reveal.explain)}</p>`
+    const explain = mission.reveal?.explain
+      ? `<p class="result ok">${esc(mission.reveal.explain)}</p>`
       : '';
     const shown =
       mission.kind === 'text' && mission.completion?.submission
-        ? `<p class="mission-submission">${esc(mission.completion.submission)}</p>`
+        ? `<p class="submission">${esc(mission.completion.submission)}</p>`
         : '';
-    return `<article class="mission is-done" data-id="${mission.id}">
-      ${head}
-      <p class="mission-result ok">✓ 완료 · +${mission.completion?.points ?? mission.points}점</p>
-      ${shown}${reveal}
-    </article>`;
+    return `<article class="mission is-done" data-id="${mission.id}">${head}${shown}${explain}</article>`;
   }
 
-  let controls = '';
+  let controls;
   if (mission.kind === 'quiz') {
-    controls = `<div class="choices">${(mission.data.options || [])
-      .map((opt, i) => `<button class="choice" type="button" data-choice="${i}">${esc(opt)}</button>`)
+    controls = `<div class="choices" role="group" aria-label="보기">${(mission.data.options || [])
+      .map(
+        (opt, i) =>
+          `<button class="choice" type="button" aria-pressed="false" data-choice="${i}">${esc(opt)}</button>`,
+      )
       .join('')}</div>
       <div class="mission-actions">
-        <button class="btn btn-primary" data-action="submit-quiz" disabled>제출</button>
-        <span class="mission-hint">틀려도 다시 풀 수 있습니다.</span>
+        <button class="btn btn-primary" data-act="quiz" disabled>제출</button>
+        <span class="mission-hint">틀려도 다시 풀 수 있습니다</span>
       </div>`;
   } else if (mission.kind === 'text') {
     const min = mission.data.minLength || 20;
-    controls = `<textarea data-input placeholder="${esc(mission.data.placeholder || '')}"></textarea>
+    controls = `<textarea data-input aria-label="${esc(mission.title)}" placeholder="${esc(
+      mission.data.placeholder || '',
+    )}"></textarea>
       <div class="mission-actions">
-        <button class="btn btn-primary" data-action="submit-text">제출</button>
+        <button class="btn btn-primary" data-act="text">제출</button>
         <span class="mission-hint" data-counter>0 / ${min}자</span>
       </div>`;
   } else {
     controls = `<div class="mission-actions">
-        <button class="btn btn-primary" data-action="submit-check">읽었습니다</button>
+        <button class="btn btn-primary" data-act="check">${icon('check')}읽었습니다</button>
       </div>`;
   }
 
-  return `<article class="mission" data-id="${mission.id}" data-kind="${esc(mission.kind)}" data-min="${
+  return `<article class="mission" data-id="${mission.id}" data-min="${
     mission.data.minLength || 0
-  }">${head}${controls}<p class="mission-result" data-result></p></article>`;
+  }">${head}${controls}<p class="result" data-result role="status"></p></article>`;
 }
 
-function bindMissionHandlers() {
-  $$('.mission', $('#mission-list')).forEach((card) => {
+function bindMissions() {
+  for (const card of $$('.mission', $('#mission-list'))) {
     const id = Number(card.dataset.id);
 
-    $$('.choice', card).forEach((choice) => {
+    for (const choice of $$('.choice', card)) {
       choice.addEventListener('click', () => {
-        $$('.choice', card).forEach((c) => c.classList.remove('is-selected'));
-        choice.classList.add('is-selected');
-        $('[data-action="submit-quiz"]', card).disabled = false;
+        for (const c of $$('.choice', card)) c.setAttribute('aria-pressed', String(c === choice));
+        $('[data-act="quiz"]', card).disabled = false;
       });
-    });
+    }
 
     const input = $('[data-input]', card);
     const counter = $('[data-counter]', card);
@@ -262,21 +341,20 @@ function bindMissionHandlers() {
       });
     }
 
-    $('[data-action="submit-check"]', card)?.addEventListener('click', () => submit(card, id, {}));
-    $('[data-action="submit-text"]', card)?.addEventListener('click', () =>
+    $('[data-act="check"]', card)?.addEventListener('click', () => submit(card, id, {}));
+    $('[data-act="text"]', card)?.addEventListener('click', () =>
       submit(card, id, { text: input?.value ?? '' }),
     );
-    $('[data-action="submit-quiz"]', card)?.addEventListener('click', () => {
-      const selected = $('.choice.is-selected', card);
-      if (!selected) return;
-      submit(card, id, { answer: Number(selected.dataset.choice) });
+    $('[data-act="quiz"]', card)?.addEventListener('click', () => {
+      const picked = $('.choice[aria-pressed="true"]', card);
+      if (picked) submit(card, id, { answer: Number(picked.dataset.choice) });
     });
-  });
+  }
 }
 
 async function submit(card, missionId, payload) {
   const buttons = $$('button', card);
-  buttons.forEach((b) => (b.disabled = true));
+  for (const b of buttons) b.disabled = true;
   const result = $('[data-result]', card);
 
   try {
@@ -284,50 +362,48 @@ async function submit(card, missionId, payload) {
 
     if (res.correct === false) {
       result.textContent = '아직 아닙니다. 시를 한 번 더 보고 골라 보세요.';
-      result.className = 'mission-result no';
-      $('.choice.is-selected', card)?.classList.add('is-wrong');
-      buttons.forEach((b) => (b.disabled = false));
-      $('[data-action="submit-quiz"]', card).disabled = true;
+      result.className = 'result no';
+      $('.choice[aria-pressed="true"]', card)?.classList.add('is-wrong');
+      for (const b of buttons) b.disabled = false;
+      $('[data-act="quiz"]', card).disabled = true;
       return;
     }
 
-    state.today.missions = res.missions;
-    state.today.stats.totalPoints += res.earnedPoints;
-    for (const challenge of res.earnedChallenges || []) {
-      toast(`${challenge.icon} ${challenge.title} — ${challenge.description}`, { star: true });
-    }
-    if (res.dayComplete) toast('오늘 몫을 다 읽었습니다.', { star: true });
+    for (const c of res.earnedChallenges || []) challengeToast(c);
+    if (res.dayComplete) toast('오늘 몫을 다 읽었습니다.', { tone: 'star', iconName: 'check' });
 
     await loadToday();
   } catch (err) {
     result.textContent = err.message;
-    result.className = 'mission-result no';
-    buttons.forEach((b) => (b.disabled = false));
+    result.className = 'result no';
+    for (const b of buttons) b.disabled = false;
   }
 }
 
 // ───────── 시집 ─────────
 async function loadLibrary() {
   const data = await api('/poems');
-  state.poems = data.poems;
   $('#library-count').textContent = `${data.readCount} / ${data.total}편`;
-  $('#poem-list').innerHTML = data.poems
+  $('#poem-index').innerHTML = data.poems
     .map(
-      (p) => `<button class="poem-item" data-poem="${esc(p.id)}">
-        <span class="poem-item-title">${esc(p.title)}${p.read ? '<span class="read-dot">●</span>' : ''}</span>
-        <span class="poem-item-preview">${esc(p.preview)}</span>
+      (p) => `<button class="poem-row" data-poem="${esc(p.id)}" data-read="${p.read}">
+        ${icon('star', p.read ? 'icon-solid' : '')}
+        <span>
+          <span class="poem-row-title">${esc(p.title)}</span>
+          <span class="poem-row-sub">${esc(formatWritten(p.written))}</span>
+        </span>
       </button>`,
     )
     .join('');
 
-  $$('.poem-item', $('#poem-list')).forEach((btn) =>
-    btn.addEventListener('click', () => openPoem(btn.dataset.poem)),
-  );
+  for (const btn of $$('.poem-row')) {
+    btn.addEventListener('click', () => openPoem(btn.dataset.poem));
+  }
 }
 
 async function openPoem(poemId) {
   const { poem } = await api(`/poems/${poemId}`);
-  $('#poem-dialog-body').innerHTML = `<div class="poem-card">${poemCardHtml(poem)}</div>`;
+  $('#poem-dialog-body').innerHTML = `<div class="manuscript" style="border-radius:0;border-left-width:3px">${poemHtml(poem)}</div>`;
   $('#poem-dialog').showModal();
   const earned = await markPoemRead(poemId);
   if (earned?.length) loadLibrary();
@@ -336,9 +412,7 @@ async function openPoem(poemId) {
 async function markPoemRead(poemId) {
   try {
     const { earnedChallenges } = await api(`/poems/${poemId}/read`, { method: 'POST' });
-    for (const c of earnedChallenges || []) {
-      toast(`${c.icon} ${c.title} — ${c.description}`, { star: true });
-    }
+    for (const c of earnedChallenges || []) challengeToast(c);
     return earnedChallenges;
   } catch {
     return [];
@@ -349,25 +423,21 @@ async function markPoemRead(poemId) {
 async function loadRooms() {
   const { rooms } = await api('/rooms');
   state.rooms = rooms;
-  if (!state.activeRoomId && rooms.length) state.activeRoomId = rooms[0].id;
-  if (state.activeRoomId && !rooms.some((r) => r.id === state.activeRoomId)) {
-    state.activeRoomId = rooms[0]?.id ?? null;
-  }
+  if (!rooms.some((r) => r.id === state.activeRoomId)) state.activeRoomId = rooms[0]?.id ?? null;
 }
 
 function renderRoomView() {
-  const hasRoom = state.rooms.length > 0;
-  $('#room-empty').hidden = hasRoom;
-  $('#room-main').hidden = !hasRoom;
-  if (!hasRoom) return;
+  const has = state.rooms.length > 0;
+  $('#room-empty').hidden = has;
+  $('#room-main').hidden = !has;
+  if (!has) return;
 
-  const picker = $('#room-picker');
-  picker.innerHTML = state.rooms
+  $('#room-picker').innerHTML = state.rooms
     .map(
       (r) =>
         `<option value="${r.id}"${r.id === state.activeRoomId ? ' selected' : ''}>${esc(
           r.name,
-        )} (${r.memberCount}명)</option>`,
+        )} · ${r.memberCount}명</option>`,
     )
     .join('');
 
@@ -381,8 +451,10 @@ $('#room-picker').addEventListener('change', (e) => {
 
 $('#room-info-btn').addEventListener('click', async () => {
   const { room, members } = await api(`/rooms/${state.activeRoomId}`);
-  const names = members.map((m) => m.displayName).join(', ');
-  toast(`「${room.name}」 초대 코드 ${room.code} · ${members.length}명 — ${names}`, { ms: 7000 });
+  toast(`초대 코드 ${room.code} · ${members.map((m) => m.displayName).join(', ')}`, {
+    iconName: 'users',
+    ms: 7000,
+  });
   navigator.clipboard?.writeText(room.code).catch(() => {});
 });
 
@@ -397,7 +469,7 @@ $('#create-room-form').addEventListener('submit', async (e) => {
     await loadRooms();
     state.activeRoomId = room.id;
     renderRoomView();
-    toast(`「${room.name}」 방을 열었습니다. 초대 코드는 ${room.code} 입니다.`, { star: true, ms: 8000 });
+    toast(`초대 코드는 ${room.code} 입니다.`, { tone: 'star', iconName: 'users', ms: 8000 });
   } catch (err) {
     $('#room-error').textContent = err.message;
   }
@@ -436,33 +508,23 @@ function connectStream(roomId) {
       state.messages.push(payload.message);
       renderMessages();
     } else if (payload.type === 'cheer') {
-      const index = state.messages.findIndex((m) => m.id === payload.message.id);
-      if (index >= 0) {
-        state.messages[index] = payload.message;
+      const i = state.messages.findIndex((m) => m.id === payload.message.id);
+      if (i >= 0) {
+        state.messages[i] = payload.message;
         renderMessages({ keepScroll: true });
       }
     }
   };
-  source.onerror = () => {
-    // EventSource 는 스스로 다시 붙는다. 조용히 둔다.
-  };
-  state.eventSource = source;
+  state.eventSource = source; // EventSource 는 끊기면 스스로 다시 붙습니다
 }
-
-const CHEERS = [
-  { key: 'star', emoji: '⭐' },
-  { key: 'heart', emoji: '💛' },
-  { key: 'leaf', emoji: '🍃' },
-  { key: 'clap', emoji: '👏' },
-];
 
 function renderMessages({ keepScroll = false } = {}) {
   const log = $('#chat-log');
-  const wasAtBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
+  const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
 
   log.innerHTML = state.messages.map(messageHtml).join('');
 
-  $$('.cheer-btn', log).forEach((btn) =>
+  for (const btn of $$('.cheer', log)) {
     btn.addEventListener('click', async () => {
       btn.disabled = true;
       try {
@@ -470,46 +532,47 @@ function renderMessages({ keepScroll = false } = {}) {
           `/rooms/${state.activeRoomId}/messages/${btn.dataset.message}/cheer`,
           { method: 'POST', body: { kind: btn.dataset.cheer } },
         );
-        for (const c of earnedChallenges || []) {
-          toast(`${c.icon} ${c.title} — ${c.description}`, { star: true });
-        }
+        for (const c of earnedChallenges || []) challengeToast(c);
       } finally {
         btn.disabled = false;
       }
-    }),
-  );
+    });
+  }
 
-  if (!keepScroll || wasAtBottom) log.scrollTop = log.scrollHeight;
+  if (!keepScroll || atBottom) log.scrollTop = log.scrollHeight;
 }
 
+const BOT_ICON = { poem: 'book', mission: 'check', challenge: 'star', notice: 'info' };
+
 function messageHtml(msg) {
-  const isMine = msg.userId === state.user?.id;
   const isBot = msg.authorType === 'bot';
-  const classes = ['msg', isBot ? 'is-bot' : '', isMine && !isBot ? 'is-mine' : '']
-    .filter(Boolean)
-    .join(' ');
+  const isMine = !isBot && msg.userId === state.user?.id;
 
   const shareTag =
     msg.kind === 'share' && msg.meta?.poemTitle
-      ? `<span class="msg-share-tag">「${esc(msg.meta.poemTitle)}」 · ${esc(
+      ? `<span class="share-tag">「${esc(msg.meta.poemTitle)}」 · ${esc(
           msg.meta.missionTitle || '감상',
         )}</span>`
       : '';
 
-  const cheerButtons = isBot
+  const cheers = isBot
     ? ''
-    : `<div class="msg-cheers">${CHEERS.map((c) => {
+    : `<div class="cheers">${CHEERS.map((c) => {
         const found = msg.cheers.find((x) => x.kind === c.key);
         const mine = found?.userIds.includes(state.user?.id);
-        return `<button class="cheer-btn${mine ? ' is-on' : ''}" data-message="${msg.id}" data-cheer="${
-          c.key
-        }">${c.emoji}${found?.count ? ` ${found.count}` : ''}</button>`;
+        return `<button class="cheer" type="button" aria-pressed="${Boolean(mine)}"
+          aria-label="${c.label}" title="${c.label}"
+          data-message="${msg.id}" data-cheer="${c.key}">${icon(c.icon, mine ? 'icon-solid' : '')}${
+            found?.count ? found.count : ''
+          }</button>`;
       }).join('')}</div>`;
 
-  return `<div class="${classes}" data-kind="${esc(msg.kind)}">
+  return `<div class="msg" data-kind="${esc(msg.kind)}" data-bot="${isBot}" data-mine="${isMine}">
     ${isBot || isMine ? '' : `<span class="msg-author">${esc(msg.authorName)}</span>`}
-    <div class="msg-bubble">${shareTag}${esc(msg.body)}</div>
-    ${cheerButtons}
+    <div class="msg-bubble">${isBot ? icon(BOT_ICON[msg.kind] || 'info') : ''}${shareTag}<span>${esc(
+      msg.body,
+    )}</span></div>
+    ${cheers}
   </div>`;
 }
 
@@ -524,9 +587,7 @@ $('#chat-form').addEventListener('submit', async (e) => {
       method: 'POST',
       body: { body },
     });
-    for (const c of earnedChallenges || []) {
-      toast(`${c.icon} ${c.title} — ${c.description}`, { star: true });
-    }
+    for (const c of earnedChallenges || []) challengeToast(c);
   } catch (err) {
     toast(err.message);
     input.value = body;
@@ -534,49 +595,44 @@ $('#chat-form').addEventListener('submit', async (e) => {
 });
 
 // ───────── 랭킹 ─────────
-$$('#ranking-scope button').forEach((btn) =>
-  btn.addEventListener('click', () => {
-    state.ranking.scope = btn.dataset.scope;
-    $$('#ranking-scope button').forEach((b) => b.classList.toggle('is-active', b === btn));
-    loadRanking();
-  }),
-);
-$$('#ranking-period button').forEach((btn) =>
-  btn.addEventListener('click', () => {
-    state.ranking.period = btn.dataset.period;
-    $$('#ranking-period button').forEach((b) => b.classList.toggle('is-active', b === btn));
-    loadRanking();
-  }),
-);
+function bindSegmented(id, key, onChange) {
+  for (const btn of $$(`#${id} button`)) {
+    btn.addEventListener('click', () => {
+      for (const b of $$(`#${id} button`)) b.setAttribute('aria-selected', String(b === btn));
+      state.ranking[key] = btn.dataset[key];
+      onChange();
+    });
+  }
+}
+bindSegmented('ranking-scope', 'scope', () => loadRanking());
+bindSegmented('ranking-period', 'period', () => loadRanking());
 
 async function loadRanking() {
   const { scope, period } = state.ranking;
   const useRoom = scope === 'room' && state.activeRoomId;
-  const path = useRoom
-    ? `/rooms/${state.activeRoomId}/ranking?period=${period}`
-    : `/ranking?period=${period}`;
-
-  const { ranking, me } = await api(path);
+  const { ranking, me } = await api(
+    useRoom ? `/rooms/${state.activeRoomId}/ranking?period=${period}` : `/ranking?period=${period}`,
+  );
 
   if (!ranking.length) {
-    $('#ranking-list').innerHTML =
-      '<li class="rank-me">아직 기록이 없습니다. 오늘의 미션을 먼저 해 보세요.</li>';
-    $('#ranking-me').textContent = '';
+    $('#rank-list').innerHTML =
+      '<li class="rank-me-note">아직 기록이 없습니다. 오늘의 미션을 먼저 해 보세요.</li>';
+    $('#rank-me').textContent = '';
     return;
   }
 
-  $('#ranking-list').innerHTML = ranking
+  $('#rank-list').innerHTML = ranking
     .map(
-      (row) => `<li class="rank-row${row.userId === state.user.id ? ' is-me' : ''}">
+      (row) => `<li class="rank-row" data-me="${row.userId === state.user.id}">
         <span class="rank-no">${row.rank}</span>
-        <span class="rank-name">${esc(row.displayName)}</span>
-        <span class="rank-points">${row.points.toLocaleString('ko-KR')}점</span>
+        <span>${esc(row.displayName)}</span>
+        <span class="rank-points">${num(row.points)}</span>
       </li>`,
     )
     .join('');
 
-  $('#ranking-me').textContent = me.rank
-    ? `내 순위 ${me.rank}위 · ${me.points.toLocaleString('ko-KR')}점`
+  $('#rank-me').textContent = me.rank
+    ? `내 순위 ${me.rank}위 · ${num(me.points)}점`
     : '아직 이 기간에는 점수가 없습니다.';
 }
 
@@ -589,119 +645,129 @@ async function loadMe() {
   ]);
 
   const s = me.stats;
-  const maxDay = Math.max(1, ...me.activity.map((a) => a.points));
+  $('#me-head').innerHTML = `${mascot(s.streak > 0 ? 'happy' : 'default')}
+    <div>
+      <div class="me-name">${esc(me.user.displayName)}</div>
+      <div class="me-sub">${esc(me.user.handle)}</div>
+    </div>`;
+
+  const peak = Math.max(1, ...me.activity.map((a) => a.points));
   const strip = me.activity
     .map((a) => {
-      const level = a.points === 0 ? 0 : a.points >= maxDay * 0.66 ? 3 : a.points >= maxDay * 0.33 ? 2 : 1;
-      return `<span class="activity-cell" data-level="${level}" title="${a.day} · ${a.points}점"></span>`;
+      const level = !a.points ? 0 : a.points >= peak * 0.66 ? 3 : a.points >= peak * 0.33 ? 2 : 1;
+      return `<span class="activity-day" data-level="${level}" title="${a.day} · ${a.points}점"></span>`;
     })
     .join('');
 
-  $('#me-summary').innerHTML = `
-    <h2 class="me-name">${esc(me.user.displayName)}</h2>
-    <div class="stat-grid">
-      <div class="stat"><div class="stat-value">${s.totalPoints.toLocaleString('ko-KR')}</div><div class="stat-label">점수</div></div>
-      <div class="stat"><div class="stat-value">${s.streak}</div><div class="stat-label">연속일</div></div>
-      <div class="stat"><div class="stat-value">${s.missionsCompleted}</div><div class="stat-label">완료 미션</div></div>
-      <div class="stat"><div class="stat-value">${s.poemsRead}</div><div class="stat-label">읽은 시</div></div>
-      <div class="stat"><div class="stat-value">${board.earnedCount}</div><div class="stat-label">도전과제</div></div>
-    </div>
-    <div class="activity-strip">${strip}</div>`;
+  const stat = (value, label) =>
+    `<div class="stat"><span class="stat-value">${value}</span><span class="stat-label">${label}</span></div>`;
 
+  $('#me-stats').innerHTML = `<div class="stat-grid">
+      ${stat(num(s.totalPoints), '점수')}${stat(s.streak, '연속일')}
+      ${stat(s.missionsCompleted, '완료 미션')}${stat(s.poemsRead, '읽은 시')}
+      ${stat(board.earnedCount, '도전과제')}
+    </div>
+    <div class="activity" role="img" aria-label="최근 3주 활동">${strip}</div>`;
+
+  $('#challenge-count').textContent = `${board.earnedCount} / ${board.total}`;
   $('#challenge-board').innerHTML = board.groups
     .map(
-      (group) => `<section>
-        <h3 class="challenge-group-name">${esc(group.name)}</h3>
+      (group) => `<section class="challenge-group">
+        <h3>${esc(group.name)}</h3>
         <div class="challenge-grid">${group.items.map(challengeHtml).join('')}</div>
       </section>`,
     )
     .join('');
 
   renderPushPanel(push);
+
+  const size = document.documentElement.dataset.textsize || '';
+  $('#textsize-select').value = size;
 }
 
 function challengeHtml(c) {
-  const bar =
+  const meter =
     !c.earned && c.progress?.target
-      ? `<div class="challenge-bar"><i style="width:${Math.round(c.progress.ratio * 100)}%"></i></div>
+      ? `<div class="meter"><i style="width:${Math.round(c.progress.ratio * 100)}%"></i></div>
          <div class="challenge-desc">${c.progress.current} / ${c.progress.target}</div>`
       : '';
-  return `<div class="challenge${c.earned ? ' is-earned' : ''}">
-    <span class="challenge-icon">${c.icon}</span>
-    <span class="challenge-title">${esc(c.title)}</span>
+  return `<div class="challenge" data-earned="${c.earned}">
+    ${icon(esc(c.icon || 'star'), c.earned ? 'icon-solid' : '')}
+    <span class="challenge-name">${esc(c.title)}</span>
     <span class="challenge-desc">${esc(c.description)}</span>
-    ${bar}
+    ${meter}
   </div>`;
 }
 
 // ───────── 웹푸시 ─────────
 function renderPushPanel(push) {
   if (!push.configured) {
-    $('#push-panel').innerHTML = `<p class="push-note">
-      이 서버에는 아직 웹푸시 키(VAPID)가 설정되지 않아 알림을 보낼 수 없습니다.<br />
+    $('#push-panel').innerHTML = `<p class="note">
+      이 서버에는 아직 웹푸시 키(VAPID)가 설정되지 않아 알림을 보낼 수 없습니다.
       <code>npm run keys</code> 로 키를 만들어 <code>.env</code> 에 넣고 서버를 다시 시작하세요.</p>`;
     return;
   }
 
   const supported = 'serviceWorker' in navigator && 'PushManager' in window;
   const p = push.prefs;
+  const toggle = (key, label, on) =>
+    `<label class="switch-row"><span>${label}</span>
+       <input type="checkbox" data-pref="${key}" ${on ? 'checked' : ''} /></label>`;
 
   $('#push-panel').innerHTML = `
     <div class="switch-row">
       <span>이 기기에서 알림 받기</span>
-      <button class="btn" id="push-toggle">${push.devices > 0 ? '해제' : '켜기'}</button>
+      <button class="btn btn-sm" id="push-toggle">${push.devices > 0 ? '해제' : '켜기'}</button>
     </div>
-    <label class="switch-row"><span>오늘의 시 알림</span>
-      <input type="checkbox" data-pref="poemPush" ${p.poemPush ? 'checked' : ''} /></label>
-    <label class="switch-row"><span>미션 발행 알림</span>
-      <input type="checkbox" data-pref="missionPush" ${p.missionPush ? 'checked' : ''} /></label>
-    <label class="switch-row"><span>도전과제 달성 알림</span>
-      <input type="checkbox" data-pref="challengePush" ${p.challengePush ? 'checked' : ''} /></label>
+    ${toggle('poemPush', '오늘의 시', p.poemPush)}
+    ${toggle('missionPush', '미션 발행', p.missionPush)}
+    ${toggle('challengePush', '도전과제 달성', p.challengePush)}
     <div class="switch-row"><span>방해 금지</span>
       <span style="display:flex;gap:6px;align-items:center">
-        <input type="number" min="0" max="23" data-pref="quietStart" value="${p.quietStart ?? ''}" placeholder="22" style="width:66px" />
-        <span class="muted">시 ~</span>
-        <input type="number" min="0" max="23" data-pref="quietEnd" value="${p.quietEnd ?? ''}" placeholder="7" style="width:66px" />
-        <span class="muted">시</span>
+        <input type="number" min="0" max="23" data-pref="quietStart" value="${p.quietStart ?? ''}"
+               placeholder="22" aria-label="방해 금지 시작 시각" />
+        <span style="color:var(--ink-mute)">~</span>
+        <input type="number" min="0" max="23" data-pref="quietEnd" value="${p.quietEnd ?? ''}"
+               placeholder="7" aria-label="방해 금지 끝 시각" />
       </span></div>
-    <p class="push-note">
-      ${supported
-        ? `연결된 기기 ${push.devices}대. 알림은 브라우저를 닫아도 도착합니다.`
-        : '이 브라우저는 웹푸시를 지원하지 않습니다. iOS 는 홈 화면에 추가한 뒤에 쓸 수 있습니다.'}
-    </p>
-    ${push.devices > 0 ? '<button class="btn btn-ghost" id="push-test">시험 삼아 하나 보내 보기</button>' : ''}`;
+    <p class="note">${
+      supported
+        ? `연결된 기기 ${push.devices}대. 알림은 앱을 닫아도 도착합니다.`
+        : 'iOS 는 홈 화면에 추가한 뒤에 알림을 받을 수 있습니다.'
+    }</p>
+    ${push.devices > 0 ? '<button class="btn btn-sm" id="push-test">시험 삼아 하나 보내 보기</button>' : ''}`;
 
   $('#push-toggle').addEventListener('click', () =>
     push.devices > 0 ? disablePush() : enablePush(push.publicKey),
   );
   $('#push-test')?.addEventListener('click', async () => {
     const res = await api('/me/push/test', { method: 'POST' });
-    toast(res.sent ? '알림을 보냈습니다.' : `보내지 못했습니다 (${res.skipped ?? '알 수 없음'}).`);
+    toast(res.sent ? '알림을 보냈습니다.' : `보내지 못했습니다 (${res.skipped ?? '알 수 없음'}).`, {
+      iconName: 'bell',
+    });
   });
 
-  $$('[data-pref]', $('#push-panel')).forEach((input) =>
+  for (const input of $$('[data-pref]', $('#push-panel'))) {
     input.addEventListener('change', async () => {
       const value =
         input.type === 'checkbox' ? input.checked : input.value === '' ? null : Number(input.value);
       await api('/me/push/prefs', { method: 'PUT', body: { [input.dataset.pref]: value } });
-      toast('알림 설정을 저장했습니다.');
-    }),
-  );
+      toast('알림 설정을 저장했습니다.', { iconName: 'check' });
+    });
+  }
 }
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const raw = atob(base64);
-  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+  return Uint8Array.from([...atob(base64)].map((c) => c.charCodeAt(0)));
 }
 
 async function enablePush(publicKey) {
   try {
     if (!('serviceWorker' in navigator)) throw new Error('이 브라우저는 알림을 지원하지 않습니다.');
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      toast('브라우저에서 알림을 허용해 주세요.');
+    if ((await Notification.requestPermission()) !== 'granted') {
+      toast('브라우저에서 알림을 허용해 주세요.', { iconName: 'bell' });
       return;
     }
     const registration = await navigator.serviceWorker.ready;
@@ -710,7 +776,7 @@ async function enablePush(publicKey) {
       applicationServerKey: urlBase64ToUint8Array(publicKey),
     });
     await api('/me/push/subscribe', { method: 'POST', body: { subscription } });
-    toast('이 기기로 알림을 보내겠습니다.', { star: true });
+    toast('이 기기로 알림을 보내겠습니다.', { tone: 'star', iconName: 'bell' });
     loadMe();
   } catch (err) {
     toast(err.message);
@@ -724,18 +790,18 @@ async function disablePush() {
     await api('/me/push/unsubscribe', { method: 'POST', body: { endpoint: subscription.endpoint } });
     await subscription.unsubscribe();
   }
-  toast('이 기기의 알림을 껐습니다.');
+  toast('이 기기의 알림을 껐습니다.', { iconName: 'bell' });
   loadMe();
 }
 
 // ───────── 시작 ─────────
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
-}
+applyTheme(currentTheme());
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 
 try {
   const { user } = await api('/auth/me');
   await enterApp(user);
 } catch {
   showGate();
+  loadProviders();
 }

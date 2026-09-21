@@ -4,147 +4,245 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>별 헤는 밤 — 윤동주 읽기</title>
-<meta name="description" content="윤동주의 시를 매일 한 편씩 읽고, 미션을 함께 수행하며, 방 안에서 감상을 나누는 교육용 앱." />
-<meta name="theme-color" content="#0b1021" />
+<meta name="description" content="윤동주의 시를 하루 한 편 읽고, 함께 나누고, 이어 가는 교육용 앱." />
+<meta name="theme-color" content="#0b1322" media="(prefers-color-scheme: dark)" />
+<meta name="theme-color" content="#f7f3e9" media="(prefers-color-scheme: light)" />
+<meta name="color-scheme" content="dark light" />
 <link rel="manifest" href="/manifest.webmanifest" />
 <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
-<link rel="apple-touch-icon" href="/icons/icon.svg" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
 <link rel="stylesheet" href="/styles.css" />
+<script src="/theme-init.js"></script>
 </head>
 <body>
 <div class="sky" aria-hidden="true"></div>
 
-<!-- ───────── 로그인 / 가입 ───────── -->
-<section id="gate" class="gate" hidden>
-  <div class="gate-card">
-    <h1 class="brand">별 헤는 밤</h1>
-    <p class="brand-sub">윤동주를 매일 한 편씩</p>
+<!-- ══════════════════════════════════════════════════════════
+     아이콘 스프라이트
+     24×24 격자, 선 굵기 1.75, 둥근 끝·이음. 색은 currentColor.
+     빌드 단계가 없는 프로젝트라 외부 파일 대신 여기에 둡니다.
+     요청이 하나 줄고 currentColor 상속이 확실합니다.
+     ══════════════════════════════════════════════════════════ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.6l2.53 5.13 5.66.82-4.1 3.99.97 5.64L12 16.5l-5.06 2.68.97-5.64-4.1-3.99 5.66-.82z"/></symbol>
+  <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3.4l1.75 5.11 5.11 1.75-5.11 1.75L12 17.12l-1.75-5.11L5.14 10.26l5.11-1.75z"/><path d="M18.6 16.4l.62 1.78 1.78.62-1.78.62-.62 1.78-.62-1.78-1.78-.62 1.78-.62z"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M12 2.9l4.6 9.1-4.6 9.1-4.6-9.1z"/><circle cx="12" cy="10.9" r="1.55"/><path d="M12 12.6v5.4"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 6.6C10.4 5.3 8 4.7 4.3 4.9v12.4c3.7-.2 6.1.4 7.7 1.8 1.6-1.4 4-2 7.7-1.8V4.9c-3.7-.2-6.1.4-7.7 1.7z"/><path d="M12 6.6v12.5"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 20.9c3.2 0 5.5-2.2 5.5-5.2 0-4.1-4-5.6-4.3-10.2-2.2 1.6-4.4 4.1-4.4 6.7 0 1 .3 1.8.8 2.5-1.1-.3-2-1.2-2.4-2.3-.8 1-1.2 2.2-1.2 3.4 0 3 2.6 5.1 6 5.1z"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M7.5 4.2h9v4.6a4.5 4.5 0 0 1-9 0z"/><path d="M7.5 5.6H5.4a2.4 2.4 0 0 0 2.4 3.6"/><path d="M16.5 5.6h2.1a2.4 2.4 0 0 1-2.4 3.6"/><path d="M12 13.3v3.4"/><path d="M8.4 19.8h7.2"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8.2" r="3.6"/><path d="M4.9 20.2a7.4 7.4 0 0 1 14.2 0"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9.4" cy="8.4" r="3.2"/><path d="M3.4 19.6a6.3 6.3 0 0 1 12 0"/><path d="M16.2 5.6a3.2 3.2 0 0 1 0 5.9"/><path d="M17.6 14.3a6.3 6.3 0 0 1 3 5.3"/></symbol>
+  <symbol id="i-path" viewBox="0 0 24 24"><path d="M5.4 18.2l3.4-6.1 4.1 2.4 5.7-9"/><circle cx="5.4" cy="18.2" r="1.7"/><circle cx="8.8" cy="12.1" r="1.7"/><circle cx="12.9" cy="14.5" r="1.7"/><circle cx="18.6" cy="5.5" r="1.7"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M20 12.1c0 3.7-3.6 6.7-8 6.7-.9 0-1.8-.1-2.7-.4l-5 1.7 1.5-3.6A6.3 6.3 0 0 1 4 12.1c0-3.7 3.6-6.7 8-6.7s8 3 8 6.7z"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18.3 16.6H5.7c1-1.1 1.6-2.4 1.6-3.9v-2.5a4.7 4.7 0 0 1 9.4 0v2.5c0 1.5.6 2.8 1.6 3.9z"/><path d="M9.6 19.2a2.5 2.5 0 0 0 4.8 0"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.6l4.4 4.4L19 7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M9.5 5.5L16 12l-6.5 6.5"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 8.2h8.4M17 8.2H20M4 15.8h3.4M12 15.8H20"/><circle cx="14.7" cy="8.2" r="2.3"/><circle cx="9.7" cy="15.8" r="2.3"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M19.6 14.8A8.1 8.1 0 0 1 9.2 4.4a8.1 8.1 0 1 0 10.4 10.4z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.8v2.1M12 19.1v2.1M4.5 4.5l1.5 1.5M18 18l1.5 1.5M2.8 12h2.1M19.1 12h2.1M4.5 19.5L6 18M18 6l1.5-1.5"/></symbol>
+  <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M5.6 19.4C4.3 13 8 5.6 19.3 4.7c.9 7.6-3.3 14.3-13.7 14.7z"/><path d="M6.2 18.9c2.8-4.4 6.2-7.8 10.2-10"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20.1S3.9 15.3 3.9 9.8A4.25 4.25 0 0 1 12 8a4.25 4.25 0 0 1 8.1 1.8c0 5.5-8.1 10.3-8.1 10.3z"/></symbol>
+  <symbol id="i-speak" viewBox="0 0 24 24"><path d="M11 5.4L6.4 9.2H3.5v5.6h2.9L11 18.6z"/><path d="M14.6 9.3a3.8 3.8 0 0 1 0 5.4"/><path d="M17.2 6.8a7.4 7.4 0 0 1 0 10.4"/></symbol>
+  <symbol id="i-quiz" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M9.7 9.5a2.3 2.3 0 1 1 3.2 2.2c-.6.3-.9.8-.9 1.4v.4"/><path d="M12 16.8h.01"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5.4" y="10.6" width="13.2" height="9" rx="2"/><path d="M8.6 10.6V7.9a3.4 3.4 0 0 1 6.8 0v2.7"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 7.6V5.7a1.9 1.9 0 0 0-1.9-1.9H5.7a1.9 1.9 0 0 0-1.9 1.9v12.6a1.9 1.9 0 0 0 1.9 1.9h7.4a1.9 1.9 0 0 0 1.9-1.9v-1.9"/><path d="M10.2 12h10M17 8.8l3.2 3.2-3.2 3.2"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5.4v13.2M5.4 12h13.2"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M12 11.2v5"/><path d="M12 7.9h.01"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.5l7 2.6v5.2c0 4.3-2.9 7.6-7 9.2-4.1-1.6-7-4.9-7-9.2V6.1z"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.8" y="5.6" width="16.4" height="14.6" rx="2.2"/><path d="M3.8 10.2h16.4M8.4 3.4v4M15.6 3.4v4"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><circle cx="12" cy="12" r="4.6"/><circle cx="12" cy="12" r="1.2"/></symbol>
+  <symbol id="i-crown" viewBox="0 0 24 24"><path d="M3.8 17.4L5.4 7.2l4.3 4.1L12 5.4l2.3 5.9 4.3-4.1 1.6 10.2z"/><path d="M4.6 20.4h14.8"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.8 6.8h14.4M9.6 6.8V5.2a1.4 1.4 0 0 1 1.4-1.4h2a1.4 1.4 0 0 1 1.4 1.4v1.6"/><path d="M6.6 6.8l.8 12a1.6 1.6 0 0 0 1.6 1.5h6a1.6 1.6 0 0 0 1.6-1.5l.8-12"/></symbol>
 
-    <div class="tabs-inline" role="tablist">
-      <button class="tab-inline is-active" data-gate-tab="login" role="tab">로그인</button>
-      <button class="tab-inline" data-gate-tab="signup" role="tab">처음이에요</button>
+  <!-- ── 마스코트 "별이" ──
+       별을 의인화한 도형입니다. 윤동주 본인의 얼굴이 아닙니다(의도적으로). -->
+  <symbol id="m-star-base" viewBox="0 0 64 64">
+    <path d="M32 5.5l7.6 15.4 17 2.47-12.3 11.99 2.9 16.94L32 44.3l-15.2 8-2.9-16.94L1.6 23.37l17-2.47z"
+          fill="var(--star)" stroke="none"/>
+  </symbol>
+  <symbol id="m-default" viewBox="0 0 64 64">
+    <use href="#m-star-base"/>
+    <circle cx="26" cy="27" r="2.4" fill="var(--star-on-fill)"/><circle cx="38" cy="27" r="2.4" fill="var(--star-on-fill)"/>
+    <path d="M28 34.5q4 3 8 0" fill="none" stroke="var(--star-on-fill)" stroke-width="2.2" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="m-happy" viewBox="0 0 64 64">
+    <use href="#m-star-base"/>
+    <path d="M23.4 27.4q2.6-3.2 5.2 0M35.4 27.4q2.6-3.2 5.2 0" fill="none" stroke="var(--star-on-fill)" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M26.5 33.5q5.5 5.5 11 0" fill="none" stroke="var(--star-on-fill)" stroke-width="2.4" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="m-cheer" viewBox="0 0 64 64">
+    <use href="#m-star-base"/>
+    <circle cx="26" cy="26.5" r="2.4" fill="var(--star-on-fill)"/><circle cx="38" cy="26.5" r="2.4" fill="var(--star-on-fill)"/>
+    <ellipse cx="32" cy="35" rx="4.2" ry="5" fill="var(--star-on-fill)"/>
+    <circle cx="19.5" cy="33" r="2.6" fill="var(--star-on-fill)" opacity=".25"/><circle cx="44.5" cy="33" r="2.6" fill="var(--star-on-fill)" opacity=".25"/>
+  </symbol>
+  <symbol id="m-sleep" viewBox="0 0 64 64">
+    <use href="#m-star-base"/>
+    <path d="M23.4 28q2.6 2.6 5.2 0M35.4 28q2.6 2.6 5.2 0" fill="none" stroke="var(--star-on-fill)" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M29.8 35.6h4.4" fill="none" stroke="var(--star-on-fill)" stroke-width="2.2" stroke-linecap="round"/>
+    <text x="46" y="20" font-size="12" font-family="serif" fill="var(--star)" stroke="none">z</text>
+    <text x="53" y="13" font-size="8" font-family="serif" fill="var(--star)" stroke="none" opacity=".6">z</text>
+  </symbol>
+</defs></svg>
+
+<!-- ════════════ 로그인 (앱의 첫 화면) ════════════ -->
+<section id="gate" class="gate" hidden>
+  <div class="gate-inner">
+    <div class="gate-mark">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><use href="#m-default"/></svg>
+      <h1 class="gate-title">별 헤는 밤</h1>
+      <p class="gate-line">
+        계절이 지나가는 하늘에는<br />가을로 가득 차 있습니다.
+        <cite>윤동주, 「별 헤는 밤」</cite>
+      </p>
     </div>
 
-    <form id="login-form" class="gate-form">
-      <label>아이디<input name="handle" autocomplete="username" required /></label>
-      <label>PIN<input name="pin" type="password" inputmode="numeric" autocomplete="current-password" required /></label>
-      <button class="btn btn-primary" type="submit">들어가기</button>
+    <div class="gate-switch" role="tablist" aria-label="로그인 방식">
+      <button type="button" role="tab" id="tab-login" aria-selected="true" aria-controls="login-form">로그인</button>
+      <button type="button" role="tab" id="tab-signup" aria-selected="false" aria-controls="signup-form">처음이에요</button>
+    </div>
+
+    <div id="google-area" hidden>
+      <button class="btn btn-block" id="google-btn" type="button">구글 계정으로 계속하기</button>
+      <p class="gate-or">또는</p>
+    </div>
+
+    <form id="login-form" class="gate-form" role="tabpanel" aria-labelledby="tab-login">
+      <label class="field"><span>아이디</span>
+        <input name="handle" autocomplete="username" required /></label>
+      <label class="field"><span>PIN</span>
+        <input name="pin" type="password" inputmode="numeric" autocomplete="current-password" required /></label>
+      <button class="btn btn-primary btn-block" type="submit">들어가기</button>
     </form>
 
-    <form id="signup-form" class="gate-form" hidden>
-      <label>아이디<input name="handle" autocomplete="username" required />
+    <form id="signup-form" class="gate-form" role="tabpanel" aria-labelledby="tab-signup" hidden>
+      <label class="field"><span>아이디</span>
+        <input name="handle" autocomplete="username" required />
         <small>한글·영문·숫자 2~20자</small></label>
-      <label>이름<input name="displayName" autocomplete="nickname" required />
+      <label class="field"><span>이름</span>
+        <input name="displayName" autocomplete="nickname" required />
         <small>방에서 보일 이름입니다</small></label>
-      <label>PIN<input name="pin" type="password" inputmode="numeric" autocomplete="new-password" required />
+      <label class="field"><span>PIN</span>
+        <input name="pin" type="password" inputmode="numeric" autocomplete="new-password" required />
         <small>숫자 4~12자리</small></label>
-      <button class="btn btn-primary" type="submit">시작하기</button>
+      <button class="btn btn-primary btn-block" type="submit">시작하기</button>
     </form>
 
     <p id="gate-error" class="form-error" role="alert"></p>
   </div>
+
+  <p class="gate-foot">
+    윤동주(1917~1945)의 작품은 저작권 보호기간이 지난 공유 저작물입니다.<br />
+    이 앱은 아이디와 이름만 받습니다.
+  </p>
 </section>
 
-<!-- ───────── 본 화면 ───────── -->
+<!-- ════════════ 본 화면 ════════════ -->
 <div id="app" hidden>
   <header class="topbar">
     <h1 class="topbar-title">별 헤는 밤</h1>
-    <div class="topbar-right">
-      <span id="streak-badge" class="badge" title="연속 달성일"></span>
-      <span id="points-badge" class="badge badge-point" title="누적 점수"></span>
-    </div>
+    <span id="streak-pill" class="stat-pill" data-kind="streak"></span>
+    <span id="points-pill" class="stat-pill" data-kind="points"></span>
+    <button class="icon-btn" id="theme-btn" type="button" aria-label="밝기 바꾸기">
+      <svg class="icon" aria-hidden="true"><use href="#i-moon" /></svg>
+    </button>
   </header>
 
-  <main id="views">
-    <!-- 오늘 -->
+  <main>
     <section class="view" data-view="today">
-      <div id="today-poem" class="poem-card"></div>
-      <h2 class="section-title">오늘의 미션</h2>
+      <article id="today-poem" class="manuscript"></article>
+      <div class="section-head"><h2>오늘의 미션</h2><span id="today-left" class="muted"></span></div>
       <div id="mission-list" class="mission-list"></div>
-      <div id="today-done" class="done-note" hidden></div>
+      <div id="today-done" class="day-done" hidden></div>
     </section>
 
-    <!-- 시집 -->
     <section class="view" data-view="library" hidden>
-      <h2 class="section-title">시집 <span id="library-count" class="muted"></span></h2>
-      <div id="poem-list" class="poem-list"></div>
+      <div class="section-head"><h2>시집</h2><span id="library-count" class="muted"></span></div>
+      <div id="poem-index" class="poem-index"></div>
     </section>
 
-    <!-- 방 -->
     <section class="view" data-view="room" hidden>
       <div id="room-empty" class="empty" hidden>
+        <svg class="icon" aria-hidden="true"><use href="#i-chat" /></svg>
         <p>아직 들어간 방이 없습니다.<br />방을 만들거나 초대 코드로 들어가 보세요.</p>
-        <form id="create-room-form" class="inline-form">
-          <input name="name" placeholder="방 이름 (예: 3학년 2반)" required />
-          <button class="btn btn-primary" type="submit">방 만들기</button>
+        <form id="create-room-form" class="row">
+          <input name="name" placeholder="방 이름 (예: 3학년 2반)" required aria-label="방 이름" />
+          <button class="btn btn-primary" type="submit">만들기</button>
         </form>
-        <form id="join-room-form" class="inline-form">
-          <input name="code" placeholder="초대 코드" autocapitalize="characters" required />
+        <form id="join-room-form" class="row">
+          <input name="code" placeholder="초대 코드" autocapitalize="characters" required aria-label="초대 코드" />
           <button class="btn" type="submit">들어가기</button>
         </form>
         <p id="room-error" class="form-error" role="alert"></p>
       </div>
 
       <div id="room-main" hidden>
-        <div class="room-header">
-          <select id="room-picker" aria-label="방 선택"></select>
-          <button id="room-info-btn" class="btn btn-ghost" type="button">방 정보</button>
+        <div class="room-bar">
+          <select id="room-picker" aria-label="방 고르기"></select>
+          <button class="icon-btn" id="room-info-btn" type="button" aria-label="방 정보">
+            <svg class="icon" aria-hidden="true"><use href="#i-info" /></svg>
+          </button>
         </div>
-        <div id="chat-log" class="chat-log" aria-live="polite"></div>
+        <div id="chat-log" class="chat-log" role="log" aria-live="polite" aria-label="대화"></div>
         <form id="chat-form" class="chat-form">
-          <input id="chat-input" placeholder="감상을 나눠 보세요" autocomplete="off" maxlength="2000" />
-          <button class="btn btn-primary" type="submit">보내기</button>
+          <input id="chat-input" placeholder="감상을 나눠 보세요" autocomplete="off" maxlength="2000" aria-label="보낼 말" />
+          <button class="btn btn-primary" type="submit" aria-label="보내기">
+            <svg class="icon" aria-hidden="true"><use href="#i-right" /></svg>
+          </button>
         </form>
       </div>
     </section>
 
-    <!-- 랭킹 -->
     <section class="view" data-view="ranking" hidden>
-      <h2 class="section-title">랭킹</h2>
-      <div class="segmented" id="ranking-scope">
-        <button class="is-active" data-scope="room">우리 방</button>
-        <button data-scope="all">전체</button>
+      <div class="section-head"><h2>랭킹</h2></div>
+      <div class="segmented" id="ranking-scope" role="tablist" aria-label="범위">
+        <button type="button" role="tab" data-scope="room" aria-selected="true">우리 방</button>
+        <button type="button" role="tab" data-scope="all" aria-selected="false">전체</button>
       </div>
-      <div class="segmented" id="ranking-period">
-        <button class="is-active" data-period="week">이번 주</button>
-        <button data-period="month">이번 달</button>
-        <button data-period="all">전체 기간</button>
+      <div class="segmented" id="ranking-period" role="tablist" aria-label="기간">
+        <button type="button" role="tab" data-period="week" aria-selected="true">이번 주</button>
+        <button type="button" role="tab" data-period="month" aria-selected="false">이번 달</button>
+        <button type="button" role="tab" data-period="all" aria-selected="false">전체</button>
       </div>
-      <ol id="ranking-list" class="ranking-list"></ol>
-      <p id="ranking-me" class="rank-me"></p>
+      <ol id="rank-list" class="rank-list"></ol>
+      <p id="rank-me" class="rank-me-note"></p>
     </section>
 
-    <!-- 나 -->
     <section class="view" data-view="me" hidden>
-      <div id="me-summary" class="me-summary"></div>
-      <h2 class="section-title">도전과제</h2>
-      <div id="challenge-board" class="challenge-board"></div>
-
-      <h2 class="section-title">알림</h2>
-      <div id="push-panel" class="push-panel"></div>
-
-      <div class="me-footer">
-        <button id="logout-btn" class="btn btn-ghost" type="button">로그아웃</button>
+      <div id="me-head" class="me-head"></div>
+      <div id="me-stats"></div>
+      <div class="section-head"><h2>도전과제</h2><span id="challenge-count" class="muted"></span></div>
+      <div id="challenge-board" class="challenge-groups"></div>
+      <div class="section-head"><h2>알림</h2></div>
+      <div id="push-panel" class="panel"></div>
+      <div class="section-head"><h2>보기 설정</h2></div>
+      <div class="panel">
+        <label class="switch-row"><span>글씨 크기</span>
+          <select id="textsize-select" style="width:auto">
+            <option value="">보통</option><option value="large">크게</option><option value="xlarge">아주 크게</option>
+          </select></label>
+      </div>
+      <div style="margin:var(--sp-8) 0;text-align:center">
+        <button class="btn btn-quiet" id="logout-btn" type="button">
+          <svg class="icon" aria-hidden="true"><use href="#i-logout" /></svg>로그아웃
+        </button>
       </div>
     </section>
   </main>
 
-  <nav class="tabbar" role="tablist">
-    <button class="tab is-active" data-view="today"><span>🌙</span>오늘</button>
-    <button class="tab" data-view="library"><span>📖</span>시집</button>
-    <button class="tab" data-view="room"><span>💬</span>방</button>
-    <button class="tab" data-view="ranking"><span>🏅</span>랭킹</button>
-    <button class="tab" data-view="me"><span>✨</span>나</button>
+  <nav class="tabbar" aria-label="화면 이동">
+    <button class="tab" data-view="today" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-path" /></svg>오늘</button>
+    <button class="tab" data-view="library"><svg class="icon" aria-hidden="true"><use href="#i-book" /></svg>시집</button>
+    <button class="tab" data-view="room"><svg class="icon" aria-hidden="true"><use href="#i-chat" /></svg>방</button>
+    <button class="tab" data-view="ranking"><svg class="icon" aria-hidden="true"><use href="#i-trophy" /></svg>랭킹</button>
+    <button class="tab" data-view="me"><svg class="icon" aria-hidden="true"><use href="#i-user" /></svg>나</button>
   </nav>
 </div>
 
-<!-- 시 전문 보기 -->
-<dialog id="poem-dialog" class="sheet">
-  <div id="poem-dialog-body"></div>
-  <form method="dialog"><button class="btn btn-ghost">닫기</button></form>
+<dialog id="poem-dialog" class="sheet" aria-label="시 전문">
+  <div class="sheet-body" id="poem-dialog-body"></div>
+  <form method="dialog" class="sheet-foot"><button class="btn btn-quiet">닫기</button></form>
 </dialog>
 
 <div id="toasts" class="toasts" aria-live="polite"></div>
