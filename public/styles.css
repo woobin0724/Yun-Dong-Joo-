@@ -16,20 +16,39 @@
   --sp-5: 20px;  --sp-6: 24px;  --sp-8: 32px;  --sp-10: 40px;
   --sp-12: 48px; --sp-16: 64px;
 
-  /* ── 글자 크기 ── */
-  --text-xs: 0.75rem;    --text-sm: 0.8125rem;  --text-base: 0.9375rem;
-  --text-lg: 1.0625rem;  --text-xl: 1.25rem;    --text-2xl: 1.625rem;
-  --text-3xl: 2rem;
+  /* ── 글자 크기 ──
+     12 / 14 / 16 / 18 / 22 / 28 / 36.
+     이전 눈금은 12와 13이 1px 차이라 서로 다른 일을 맡을 수 없었고
+     본문이 15px 이라 읽기 바닥(16px)에 못 미쳤습니다. */
+  --text-xs:   0.75rem;    /* 12 — 아주 작은 딱지 */
+  --text-sm:   0.875rem;   /* 14 — 보조·메타 */
+  --text-base: 1rem;       /* 16 — 본문 */
+  --text-lg:   1.125rem;   /* 18 — 시 본문·강조 */
+  --text-xl:   1.375rem;   /* 22 — 이름 */
+  --text-2xl:  1.75rem;    /* 28 — 시 제목 */
+  --text-3xl:  2.25rem;    /* 36 — 앱 이름 */
+
+  /* ── 행간·자간 ──
+     어두운 바탕의 흰 글자는 같은 값이어도 더 빽빽해 보입니다.
+     아래 테마 블록에서 조금씩 풀어 줍니다. */
+  --leading-body: 1.7;
+  --leading-tight: 1.45;
+  --tracking-body: 0;
 
   /* ── 모서리 ── */
   --r-sm: 8px;  --r-md: 12px;  --r-lg: 18px;  --r-pill: 999px;
 
   /* ── 글꼴 ──
-     시는 명조(Gowun Batang), UI 는 각 기기의 시스템 글꼴.
-     시스템 글꼴을 쓰면 내려받을 것이 없고 기기에 가장 자연스럽게 얹힙니다. */
-  --font-poem: 'Gowun Batang', 'Nanum Myeongjo', 'Apple SD Gothic Neo', serif;
-  --font-ui: -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo',
-             'Malgun Gothic', 'Noto Sans KR', Roboto, sans-serif;
+     시는 명조, 앱의 뼈대는 산세리프. 역할이 다르니 얼굴도 다릅니다.
+     둘 다 자체 호스팅이라 어느 기기에서나 같은 화면이 나오고,
+     외부 CDN 이 막혀도 오프라인에서도 제 모습입니다.
+
+     UI 를 시스템 글꼴로 두면 Windows 는 맑은 고딕, iOS 는 Apple SD Gothic Neo,
+     Android 는 Noto 로 갈라져 사실상 세 개의 다른 앱이 됩니다.
+     그렇다고 Noto Sans KR 을 집으면 누구나 반사적으로 고르는 그 선택이 됩니다. */
+  --font-poem: 'Gowun Batang', 'Nanum Myeongjo', serif;
+  --font-ui: 'IBM Plex Sans KR', -apple-system, BlinkMacSystemFont, system-ui,
+             'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
 
   /* ── 크기 ── */
   --topbar-h: calc(var(--tap) + var(--sp-4) + 1px);
@@ -70,6 +89,10 @@
 
   --leaf:        #7fc9a6;
   --alert:       #ef9aa6;
+
+  /* 밝은 글자가 어두운 바탕에서 빽빽해 보이는 것을 되돌립니다. */
+  --leading-body: 1.75;
+  --tracking-body: 0.005em;
 
   --shadow: 0 8px 28px #00000059;
   --sky-1: #2a2f6b33;
@@ -126,8 +149,8 @@
 }
 
 /* 큰 글씨 설정 */
-:root[data-textsize='large'] { --text-base: 1.0625rem; --text-lg: 1.1875rem; --text-sm: 0.9375rem; }
-:root[data-textsize='xlarge'] { --text-base: 1.1875rem; --text-lg: 1.3125rem; --text-sm: 1.0625rem; }
+:root[data-textsize='large']  { --text-base: 1.125rem; --text-lg: 1.25rem;   --text-sm: 1rem; }
+:root[data-textsize='xlarge'] { --text-base: 1.25rem;  --text-lg: 1.4375rem; --text-sm: 1.125rem; }
 
 /* ═══════════════ 기본 ═══════════════ */
 
@@ -143,7 +166,8 @@ body {
   color: var(--ink);
   font-family: var(--font-ui);
   font-size: var(--text-base);
-  line-height: 1.65;
+  line-height: var(--leading-body);
+  letter-spacing: var(--tracking-body);
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 
@@ -394,7 +418,12 @@ textarea { min-height: 120px; resize: vertical; line-height: 1.8; }
   white-space: nowrap;
 }
 .stat-pill .icon { width: 1em; height: 1em; }
-.stat-pill[data-kind='streak'] { color: var(--ink-soft); }
+.stat-pill[data-kind='streak'] {
+  background: transparent;
+  padding-inline: var(--sp-1);
+  color: var(--ink-soft);
+  font-weight: 500;
+}
 .stat-pill[data-kind='points'] { color: var(--star-ink); background: var(--star-soft); }
 
 main {
@@ -485,43 +514,64 @@ main {
   line-height: 1.35;
 }
 .poem-title .hanja { font-size: 0.55em; color: var(--ink-mute); margin-left: var(--sp-2); font-weight: 400; }
-.poem-byline { margin: var(--sp-2) 0 var(--sp-6); font-size: var(--text-sm); color: var(--ink-mute); }
+.poem-byline { margin: var(--sp-2) 0 var(--sp-8); font-size: var(--text-sm); color: var(--ink-mute); }
 
-.poem-body { font-family: var(--font-poem); font-size: var(--text-lg); }
-.poem-body .stanza {
-  margin: 0 0 1.9em;
+.poem-body {
+  font-family: var(--font-poem);
+  /* 좁은 화면에서 시행이 접히는 것을 줄입니다. 글자 크기가 줄어도
+     시행이 온전히 한 줄에 놓이는 쪽이 읽기에 낫습니다. */
+  font-size: clamp(1rem, 4.3vw, var(--text-lg));
+}
+.poem-body .stanza { margin: 0 0 1.9em; }
+.poem-body .stanza:last-child { margin-bottom: 0; }
+
+/* 시행 하나가 요소 하나입니다.
+   화면이 좁아 어쩔 수 없이 접힐 때, 이어지는 부분을 들여 써서
+   새로운 행과 구별합니다. 시집에서 쓰는 방식입니다. */
+.poem-body .line {
+  display: block;
+  padding-left: 1.4em;
+  text-indent: -1.4em;
   line-height: 2.05;
   letter-spacing: 0.01em;
-  white-space: pre-wrap;   /* 시인이 나눈 행을 그대로 둡니다 */
-  word-break: keep-all;    /* 넘칠 때도 어절은 지킵니다 */
+  word-break: keep-all;
   overflow-wrap: break-word;
 }
-.poem-body .stanza:last-child { margin-bottom: 0; }
-/* 산문시는 행이 길어 행간을 조금 줄이고 첫 줄을 들여 씁니다. */
-.poem-body.is-prose .stanza { line-height: 1.95; text-indent: 1em; margin-bottom: 1.4em; }
 
-.poem-note {
-  margin-top: var(--sp-6);
-  padding-top: var(--sp-4);
-  border-top: 1px solid var(--line);
+/* 산문시는 행이 아니라 문단입니다. 첫 줄을 들여 쓰는 쪽이 맞습니다. */
+.poem-body.is-prose .stanza { margin-bottom: 1.4em; }
+.poem-body.is-prose .line {
+  padding-left: 0;
+  text-indent: 1em;
+  line-height: 1.95;
+}
+
+/* 읽기 도움말 — 시가 놓인 종이가 아니라 그 곁의 여백에 적힙니다. */
+.reading-note {
+  display: block;
+  margin-top: var(--sp-5);
+  padding-left: var(--sp-4);
+  border-left: 1px solid var(--line);
   font-size: var(--text-sm);
   color: var(--ink-soft);
-  line-height: 1.85;
+  line-height: 1.8;
 }
-.poem-note b {
-  display: block;
-  margin-bottom: var(--sp-1);
+.reading-note h3 {
+  margin-bottom: var(--sp-2);
   font-size: var(--text-xs);
-  letter-spacing: 0.1em;
-  color: var(--ink-mute);
   font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--ink-mute);
 }
+.reading-note p { margin: 0; }
+/* 대화상자 안에서는 종이 바로 아래에 붙습니다. */
+.reading-note.is-inset { margin: var(--sp-5) var(--sp-5) var(--sp-6); }
 
 .tag-row { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-4); }
 .tag {
-  padding: 2px var(--sp-3);
-  border: 1px solid var(--line);
+  padding: 3px var(--sp-3);
   border-radius: var(--r-pill);
+  background: var(--surface-2);
   font-size: var(--text-xs);
   color: var(--ink-mute);
 }
@@ -885,12 +935,12 @@ dialog.sheet::backdrop { background: #04070ecc; }
 
 /* ═══════════════ 알림 토스트 ═══════════════ */
 
-/* 아래에 두면 채팅 입력창을 덮습니다. 글을 쓰는 중에 가리는 알림은
-   알림이 아니라 방해입니다. 그래서 상단바 아래로 내려놓습니다. */
+/* 위에 두면 화면 첫 제목을 덮고, 아래에 두면 채팅 입력창을 덮습니다.
+   그래서 기본은 아래에 두고, 입력창이 있는 방 화면에서만 그 위로 띄웁니다. */
 .toasts {
   position: fixed;
   left: 50%;
-  top: calc(var(--topbar-h) + env(safe-area-inset-top) + var(--sp-2));
+  bottom: calc(var(--tabbar-h) + var(--sp-4) + env(safe-area-inset-bottom));
   z-index: 50;
   display: grid;
   gap: var(--sp-2);
@@ -914,7 +964,11 @@ dialog.sheet::backdrop { background: #04070ecc; }
 .toast[data-tone='star'] { border-color: var(--star-line); color: var(--star-ink); }
 .toast .icon { flex: none; }
 
-@keyframes toast-in { from { opacity: 0; transform: translateY(-6px); } }
+body[data-view='room'] .toasts {
+  bottom: calc(var(--tabbar-h) + 4.5rem + env(safe-area-inset-bottom));
+}
+
+@keyframes toast-in { from { opacity: 0; transform: translateY(6px); } }
 
 /* ═══════════════ 의미 있는 모션만 ═══════════════ */
 

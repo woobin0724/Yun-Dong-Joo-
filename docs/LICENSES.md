@@ -28,20 +28,23 @@ OFL 1.1 요건 중 이 앱에 해당하는 것:
 - 저작권 표시와 라이선스 전문을 함께 둡니다 (위 `OFL.txt`).
 - 글꼴 이름을 바꾸지 않았고, "Gowun Batang"을 이 앱 이름으로 쓰지 않습니다.
 
-### UI 글꼴 — 내려받는 파일 없음
+### IBM Plex Sans KR — UI 전반
 
-각 기기의 시스템 글꼴을 씁니다. 배포되는 파일이 없으므로 라이선스 의무도 없습니다.
+- **라이선스**: SIL Open Font License, Version 1.1
+- **저작권**: Copyright © 2017 IBM Corp. with Reserved Font Name "Plex"
+- **한글 디자인**: Sandoll
+- **받아온 곳**: Google Fonts
+- **라이선스 전문**: [`public/fonts/plex-sans-kr/OFL.txt`](../public/fonts/plex-sans-kr/OFL.txt)
+- **저장 위치**: `public/fonts/plex-sans-kr/` (woff2 서브셋 282개, 약 3.3MB)
+- **다시 받는 법**: `node scripts/fetch-fonts.js`
 
-| 환경 | 실제로 쓰이는 글꼴 |
-|---|---|
-| iOS / macOS | Apple SD Gothic Neo (`-apple-system`) |
-| Windows | 맑은 고딕 (Malgun Gothic) |
-| Android | Noto Sans KR (`Roboto` 경유) |
-| 그 외 | `system-ui` → `sans-serif` |
+OFL 의 "Reserved Font Name" 조항에 따라, 글꼴을 고쳐서 배포할 때는 "Plex" 라는 이름을
+쓸 수 없습니다. 이 앱은 글꼴을 고치지 않고 그대로 제공하므로 해당하지 않습니다.
 
-> Pretendard 를 쓰고 싶으시면 [배포처](https://github.com/orioncactus/pretendard)에서 받아
-> `public/fonts/pretendard/` 에 넣고 `public/fonts/fonts.css` 에 `@font-face` 를 추가하시면 됩니다.
-> Pretendard 역시 OFL 1.1 이므로 이 문서에 항목을 추가해 주세요.
+**왜 시스템 글꼴을 쓰지 않는가**: 시스템 글꼴로 두면 Windows 는 맑은 고딕,
+iOS 는 Apple SD Gothic Neo, Android 는 Noto 로 갈라져 사실상 세 개의 다른 앱이 됩니다.
+그렇다고 Noto Sans KR 을 고르면 누구나 반사적으로 집는 선택이 되고, 용량도 8MB 를 넘습니다.
+(글꼴이 아직 안 받아졌을 때를 대비한 대체 목록에는 시스템 글꼴이 그대로 남아 있습니다.)
 
 ---
 

@@ -22,7 +22,14 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-const FAMILIES = [{ name: 'Gowun Batang', query: 'Gowun+Batang:wght@400;700', dir: 'gowun-batang' }];
+const FAMILIES = [
+  // 시 본문 — 소리 내어 읽는 글. 부드러운 명조.
+  { name: 'Gowun Batang', query: 'Gowun+Batang:wght@400;700', dir: 'gowun-batang' },
+  // UI — 앱의 뼈대. Sandoll 이 IBM 디자인 시스템용으로 그린 한글 산세리프.
+  // 시스템 기본 글꼴(맑은 고딕·Apple SD Gothic Neo)을 쓰면 기기마다 다른 앱이 되고,
+  // Noto Sans KR 은 누구나 반사적으로 집는 선택이라 둘 다 피했다.
+  { name: 'IBM Plex Sans KR', query: 'IBM+Plex+Sans+KR:wght@400;500;700', dir: 'plex-sans-kr' },
+];
 
 const OUT_ROOT = path.resolve('public/fonts');
 // woff2 를 받으려면 최신 브라우저인 척해야 한다. 아니면 구형 포맷을 준다.
@@ -80,9 +87,8 @@ const header = `/* 자동 생성 파일 — 고치지 마세요. \`node scripts/
  * (https://github.com/yangheeryu/Gowun-Batang)
  * 출처: Google Fonts. 라이선스 전문은 docs/LICENSES.md 참고.
  *
- * UI 글꼴은 따로 받지 않고 각 기기의 시스템 글꼴을 씁니다
- * (iOS: Apple SD Gothic Neo / Windows: 맑은 고딕 / Android: Noto Sans KR).
- * 내려받을 것이 없으니 가장 빠르고, 기기에 가장 자연스럽게 어울립니다.
+ * IBM Plex Sans KR — SIL Open Font License 1.1
+ * Copyright IBM Corp. 디자인: Sandoll
  */
 `;
 

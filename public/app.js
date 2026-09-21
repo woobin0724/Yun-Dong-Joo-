@@ -263,6 +263,7 @@ function switchView(name) {
   const target = views.some((v) => v.dataset.view === name) ? name : 'today';
 
   for (const v of views) v.hidden = v.dataset.view !== target;
+  document.body.dataset.view = target; // 토스트 위치가 화면마다 달라집니다
   for (const t of $$('.tab')) {
     if (t.dataset.view === target) t.setAttribute('aria-current', 'page');
     else t.removeAttribute('aria-current');
@@ -292,6 +293,7 @@ function renderToday() {
   $('#points-pill').innerHTML = `${icon('star')}${num(stats.totalPoints)}`;
 
   $('#today-poem').innerHTML = poemHtml(poem);
+  $('#today-note').innerHTML = readingNoteHtml(poem);
   $('#mission-list').innerHTML = missions.map(missionHtml).join('');
 
   const left = missions.filter((m) => !m.completed).length;
@@ -313,20 +315,36 @@ function renderToday() {
   markPoemRead(poem.id);
 }
 
-/** 원고지 조판. 연은 배열이고, 연 안의 행은 줄바꿈으로 유지합니다. */
+/**
+ * 원고지에 놓이는 것은 시뿐입니다.
+ * 연은 배열이고, 연 안의 행은 시인이 나눈 그대로 줄바꿈으로 남습니다.
+ */
 function poemHtml(poem) {
   const stanzas = poem.stanzas
-    .map((lines) => `<p class="stanza">${esc(lines.join('\n'))}</p>`)
+    .map(
+      (lines) =>
+        `<p class="stanza">${lines
+          .map((line) => `<span class="line">${esc(line)}</span>`)
+          .join('')}</p>`,
+    )
     .join('');
-  const tags = (poem.themes || []).map((t) => `<span class="tag">${esc(t)}</span>`).join('');
   return `
     <h2 class="poem-title">${esc(poem.title)}${
       poem.hanja ? `<span class="hanja">${esc(poem.hanja)}</span>` : ''
     }</h2>
     <p class="poem-byline">윤동주 · ${esc(formatWritten(poem.written))}</p>
-    <div class="poem-body${poem.form === 'prose' ? ' is-prose' : ''}">${stanzas}</div>
-    ${poem.note ? `<div class="poem-note"><b>읽기 도움말</b>${esc(poem.note)}</div>` : ''}
-    <div class="tag-row">${tags}</div>`;
+    <div class="poem-body${poem.form === 'prose' ? ' is-prose' : ''}">${stanzas}</div>`;
+}
+
+/**
+ * 해설과 주제어. 시가 놓인 종이가 아니라 그 곁에 적힙니다.
+ * 해설은 사실 진술이 아니라 이 앱이 쓴 읽기 안내입니다.
+ */
+function readingNoteHtml(poem) {
+  const tags = (poem.themes || []).map((t) => `<span class="tag">${esc(t)}</span>`).join('');
+  return `${
+    poem.note ? `<h3>읽기 도움말</h3><p>${esc(poem.note)}</p>` : ''
+  }<div class="tag-row">${tags}</div>`;
 }
 
 function formatWritten(written) {
@@ -474,7 +492,9 @@ async function loadLibrary() {
 
 async function openPoem(poemId) {
   const { poem } = await api(`/poems/${poemId}`);
-  $('#poem-dialog-body').innerHTML = `<div class="manuscript is-sheet">${poemHtml(poem)}</div>`;
+  $('#poem-dialog-body').innerHTML =
+    `<div class="manuscript is-sheet">${poemHtml(poem)}</div>` +
+    `<aside class="reading-note is-inset">${readingNoteHtml(poem)}</aside>`;
   $('#poem-dialog').showModal();
   const earned = await markPoemRead(poemId);
   if (earned?.length) loadLibrary();
