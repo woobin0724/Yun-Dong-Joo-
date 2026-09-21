@@ -32,6 +32,7 @@
              'Malgun Gothic', 'Noto Sans KR', Roboto, sans-serif;
 
   /* ── 크기 ── */
+  --topbar-h: calc(var(--tap) + var(--sp-4) + 1px);
   --tabbar-h: 58px;
   --tap: 44px;              /* 최소 터치 영역 */
   --measure: 34rem;         /* 본문 최대 폭 */
@@ -59,7 +60,7 @@
 
   --ink:         #eae7dd;     /* 순백이 아니라 따뜻한 미색 */
   --ink-soft:    #a9b0c4;
-  --ink-mute:    #737d95;
+  --ink-mute:    #838fa8;
 
   --star:        #f0c661;   /* 장식·면·테두리 */
   --star-ink:    #f0c661;   /* 글자 (어두운 화면에서는 같은 값) */
@@ -79,11 +80,11 @@
 :root[data-theme='light'] {
   color-scheme: light;
 
-  --bg:          #f7f3e9;
-  --bg-veil:     #f7f3e9f2;
-  --surface:     #fffdf7;
-  --surface-2:   #f2ecdd;
-  --manuscript:  #fffdf6;
+  --bg:          #f1ead9;   /* 한지 — 책상에 깔린 종이 */
+  --bg-veil:     #f1ead9f2;
+  --surface:     #fbf7ec;
+  --surface-2:   #e8e0cb;
+  --manuscript:  #fdfaf1;   /* 그 위에 놓인 원고지 한 장 */
   --rule:        #1e24360f;
   --rule-accent: #b4544a33;
 
@@ -92,7 +93,7 @@
 
   --ink:         #1c2333;
   --ink-soft:    #4b5468;
-  --ink-mute:    #79808f;
+  --ink-mute:    #5c6371;
 
   /* 밝은 바탕에서는 글자용과 장식용을 나눠야 합니다.
      글자를 읽히게 하려고 금색을 어둡게 하면 장식까지 칙칙해지기 때문입니다. */
@@ -114,10 +115,10 @@
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) {
     color-scheme: light;
-    --bg: #f7f3e9; --bg-veil: #f7f3e9f2; --surface: #fffdf7; --surface-2: #f2ecdd;
-    --manuscript: #fffdf6; --rule: #1e24360f; --rule-accent: #b4544a33;
+    --bg: #f1ead9; --bg-veil: #f1ead9f2; --surface: #fbf7ec; --surface-2: #e8e0cb;
+    --manuscript: #fdfaf1; --rule: #1e24360f; --rule-accent: #b4544a33;
     --line: #1e243620; --line-strong: #1e243640;
-    --ink: #1c2333; --ink-soft: #4b5468; --ink-mute: #79808f;
+    --ink: #1c2333; --ink-soft: #4b5468; --ink-mute: #5c6371;
     --star: #c9992e; --star-ink: #7d5c11; --star-soft: #c9992e1f; --star-line: #c9992e66;
     --leaf: #2a6e52; --alert: #b3323f;
     --shadow: 0 6px 20px #1e24361a; --sky-1: #4a5bb81a; --sky-2: #2a6ea314;
@@ -145,6 +146,12 @@ body {
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+
+  /* 한국어는 낱말 중간에서 줄이 끊기면 읽기가 크게 나빠집니다.
+     ("까닭입니 / 다" 처럼 한 글자가 다음 줄로 넘어갑니다.)
+     keep-all 이 어절을 붙잡아 주고, 끊을 곳이 없는 긴 문자열만 anywhere 로 풀어 줍니다. */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 /* 배경. 그라데이션은 이 한 곳에만 씁니다. */
@@ -159,7 +166,34 @@ body {
 
 h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 
-a { color: var(--star-ink); }
+a {
+  color: var(--star-ink);
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
+}
+
+/* 우리가 그리지 않은 부분에도 디자인이 이어져야 합니다.
+   선택 영역, 커서, 스크롤바, 자리표시자는 손대지 않으면
+   브라우저 기본값 그대로 남아 어느 디자인에도 속하지 않습니다. */
+::selection { background: var(--star-soft); color: var(--ink); }
+
+input, textarea, select { caret-color: var(--star-ink); }
+::placeholder { color: var(--ink-mute); opacity: 1; }
+
+* { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: var(--r-pill);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--ink-mute); background-clip: content-box; }
+
+/* 숫자가 바뀌어도 자리가 흔들리지 않게 */
+.stat-pill, .mission-points, .mission-hint, .rank-no, .rank-points,
+.stat-value, .cheer, .challenge-desc { font-variant-numeric: tabular-nums; }
 
 :where(button, a, input, select, textarea):focus-visible {
   outline: 2px solid var(--star);
@@ -332,7 +366,7 @@ textarea { min-height: 120px; resize: vertical; line-height: 1.8; }
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  padding: var(--sp-2) var(--sp-3);
+  padding: var(--sp-2) max(var(--sp-3), calc((100% - var(--measure)) / 2));
   padding-top: max(var(--sp-2), env(safe-area-inset-top));
   background: var(--bg-veil);
   backdrop-filter: blur(10px);
@@ -379,6 +413,7 @@ main {
   backdrop-filter: blur(10px);
   border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom);
+  padding-inline: max(0px, calc((100% - var(--measure)) / 2));
 }
 .tab {
   display: grid;
@@ -420,21 +455,29 @@ main {
 .manuscript {
   position: relative;
   padding: var(--sp-8) var(--sp-5) var(--sp-6);
+  padding-left: calc(var(--sp-5) + 6px);
   background-color: var(--manuscript);
+  /* 원고지의 세로 괘선. 장식 무늬가 아니라 종이에 실제로 인쇄된 선입니다. */
   background-image: repeating-linear-gradient(
     to right, var(--rule) 0 1px, transparent 1px 2.25rem
   );
   border: 1px solid var(--line);
-  border-left: 2px solid var(--rule-accent);
+  border-left: 1px solid var(--rule-accent);
   border-radius: 0 var(--r-md) var(--r-md) 0;
 }
+/* 시집에서 펼친 시 — 대화상자 안을 가득 채우는 한 장. */
+.manuscript.is-sheet { border-radius: 0; border-right: 0; border-top: 0; }
 
-.poem-eyebrow {
-  margin: 0 0 var(--sp-2);
-  font-size: var(--text-xs);
-  letter-spacing: 0.18em;
-  color: var(--star-ink);
+/* 여백선은 원래 가는 두 줄입니다. 굵은 한 줄로 그리면 종이가 아니라
+   카드에 붙인 색 탭으로 보입니다. */
+.manuscript::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 5px;
+  width: 1px;
+  background: var(--rule-accent);
 }
+
 .poem-title {
   font-family: var(--font-poem);
   font-size: var(--text-2xl);
@@ -449,7 +492,9 @@ main {
   margin: 0 0 1.9em;
   line-height: 2.05;
   letter-spacing: 0.01em;
-  white-space: pre-wrap;
+  white-space: pre-wrap;   /* 시인이 나눈 행을 그대로 둡니다 */
+  word-break: keep-all;    /* 넘칠 때도 어절은 지킵니다 */
+  overflow-wrap: break-word;
 }
 .poem-body .stanza:last-child { margin-bottom: 0; }
 /* 산문시는 행이 길어 행간을 조금 줄이고 첫 줄을 들여 씁니다. */
@@ -561,6 +606,8 @@ main {
   line-height: 1.9;
 }
 .day-done .icon { width: 28px; height: 28px; }
+.day-done svg.mascot { width: 44px; height: 44px; }
+.day-done p { margin: 0; }
 
 /* ═══════════════ 시집 ═══════════════ */
 
@@ -808,15 +855,42 @@ dialog.sheet::backdrop { background: #04070ecc; }
 .switch-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); min-height: var(--tap); }
 .switch-row input[type='checkbox'] { width: auto; min-height: 0; accent-color: var(--star); transform: scale(1.3); }
 .switch-row input[type='number'] { width: 4.5rem; min-height: var(--tap); text-align: center; }
+.switch-row select { width: auto; }
+.quiet-range { display: flex; align-items: center; gap: var(--sp-2); }
+.quiet-range span { color: var(--ink-mute); }
 .note { margin: 0; font-size: var(--text-sm); color: var(--ink-mute); line-height: 1.8; }
 .note code { font-size: 0.9em; padding: 1px 5px; border-radius: 4px; background: var(--surface-2); }
+.view-foot { margin: var(--sp-8) 0; text-align: center; }
+
+/* ═══════════════ 첫 화면 대기 ═══════════════
+   서버에 로그인 상태를 물어보는 동안 보이는 화면.
+   빈 화면 대신 별이가 기다립니다. */
+
+.boot {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--sp-4);
+  min-height: 100dvh;
+  padding: var(--sp-6);
+  text-align: center;
+}
+.boot svg { width: 56px; height: 56px; }
+.boot p { margin: 0; color: var(--ink-mute); font-size: var(--text-sm); line-height: 1.8; }
+.boot .btn { margin-top: var(--sp-2); }
+
+/* 별빛이 아주 천천히 밝아졌다 흐려지는 정도. 기다리는 동안의 유일한 움직임입니다. */
+@keyframes boot-breathe { 50% { opacity: 0.45; } }
+.boot[data-state='loading'] svg { animation: boot-breathe 2.4s ease-in-out infinite; }
 
 /* ═══════════════ 알림 토스트 ═══════════════ */
 
+/* 아래에 두면 채팅 입력창을 덮습니다. 글을 쓰는 중에 가리는 알림은
+   알림이 아니라 방해입니다. 그래서 상단바 아래로 내려놓습니다. */
 .toasts {
   position: fixed;
   left: 50%;
-  bottom: calc(var(--tabbar-h) + var(--sp-4));
+  top: calc(var(--topbar-h) + env(safe-area-inset-top) + var(--sp-2));
   z-index: 50;
   display: grid;
   gap: var(--sp-2);
@@ -840,17 +914,9 @@ dialog.sheet::backdrop { background: #04070ecc; }
 .toast[data-tone='star'] { border-color: var(--star-line); color: var(--star-ink); }
 .toast .icon { flex: none; }
 
-@keyframes toast-in { from { opacity: 0; transform: translateY(6px); } }
+@keyframes toast-in { from { opacity: 0; transform: translateY(-6px); } }
 
 /* ═══════════════ 의미 있는 모션만 ═══════════════ */
-
-/* 별이 켜지는 순간 */
-@keyframes star-lit {
-  0%   { transform: scale(0.7); opacity: 0; }
-  60%  { transform: scale(1.15); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
-}
-.is-lighting { animation: star-lit 520ms var(--ease); }
 
 /* 미션 완료 체크 */
 @keyframes draw-check { from { stroke-dashoffset: 26; } to { stroke-dashoffset: 0; } }

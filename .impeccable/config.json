@@ -1,0 +1,28 @@
+{
+  "detector": {
+    "ignoreRules": [
+      "repeating-stripes-gradient"
+    ],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          "public/styles.css"
+        ],
+        "createdAt": "2026-09-21T04:49:19.208Z",
+        "reason": "한지(韓紙) — 이 앱이 고른 재료입니다. 윤동주의 시를 원고지 위에서 읽는 것이 디자인의 전제이고, 밝은 화면의 바탕은 그 종이색입니다. 무난해서 고른 오프화이트가 아닙니다."
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          "public/index.html"
+        ],
+        "createdAt": "2026-09-21T04:49:19.272Z",
+        "reason": "위와 같음 — 한지 바탕"
+      }
+    ]
+  }
+}

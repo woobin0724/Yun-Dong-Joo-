@@ -86,6 +86,13 @@
   </symbol>
 </defs></svg>
 
+<!-- ════════════ 첫 화면 대기 ════════════ -->
+<section id="boot" class="boot" data-state="loading" aria-live="polite">
+  <svg viewBox="0 0 64 64" aria-hidden="true"><use href="#m-default" /></svg>
+  <p id="boot-message">잠시만요, 별을 헤아리는 중입니다.</p>
+  <button class="btn btn-sm" id="boot-retry" type="button" hidden>다시 시도</button>
+</section>
+
 <!-- ════════════ 로그인 (앱의 첫 화면) ════════════ -->
 <section id="gate" class="gate" hidden>
   <div class="gate-inner">
@@ -241,11 +248,11 @@
       <div class="section-head"><h2>보기 설정</h2></div>
       <div class="panel">
         <label class="switch-row"><span>글씨 크기</span>
-          <select id="textsize-select" style="width:auto">
+          <select id="textsize-select">
             <option value="">보통</option><option value="large">크게</option><option value="xlarge">아주 크게</option>
           </select></label>
       </div>
-      <div style="margin:var(--sp-8) 0;text-align:center">
+      <div class="view-foot">
         <button class="btn btn-quiet" id="logout-btn" type="button">
           <svg class="icon" aria-hidden="true"><use href="#i-logout" /></svg>로그아웃
         </button>

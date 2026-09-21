@@ -16,7 +16,7 @@ const icon = (name, cls = '') =>
   `<svg class="icon ${cls}" aria-hidden="true"><use href="#i-${name}" /></svg>`;
 
 const mascot = (mood = 'default') =>
-  `<svg viewBox="0 0 64 64" aria-hidden="true"><use href="#m-${mood}" /></svg>`;
+  `<svg class="mascot" viewBox="0 0 64 64" aria-hidden="true"><use href="#m-${mood}" /></svg>`;
 
 const num = (n) => Number(n || 0).toLocaleString('ko-KR');
 
@@ -103,6 +103,23 @@ $('#textsize-select').addEventListener('change', (e) => {
   try { localStorage.setItem('ydj.textsize', value); } catch {}
 });
 
+// ───────── 첫 화면 대기 ─────────
+const boot = {
+  show(message, { retry = false, mood = 'default' } = {}) {
+    const el = $('#boot');
+    el.hidden = false;
+    el.dataset.state = retry ? 'failed' : 'loading';
+    $('#boot-message').textContent = message;
+    $('#boot-retry').hidden = !retry;
+    $('svg use', el).setAttribute('href', `#m-${mood}`);
+  },
+  hide() {
+    $('#boot').hidden = true;
+  },
+};
+
+$('#boot-retry').addEventListener('click', () => start());
+
 // ───────── 로그인 ─────────
 const AUTH_ERRORS = {
   cancelled: '구글 로그인을 취소하셨습니다.',
@@ -112,6 +129,7 @@ const AUTH_ERRORS = {
 };
 
 function showGate() {
+  boot.hide();
   $('#gate').hidden = false;
   $('#welcome').hidden = true;
   $('#app').hidden = true;
@@ -126,6 +144,7 @@ function showGate() {
 
 /** 구글로 갓 들어온 사람에게 이름·아이디를 받습니다. */
 async function showWelcome(user) {
+  boot.hide();
   state.user = user;
   $('#gate').hidden = true;
   $('#app').hidden = true;
@@ -230,6 +249,7 @@ $('#google-btn').addEventListener('click', () => {
 });
 
 async function enterApp(user) {
+  boot.hide();
   state.user = user;
   $('#gate').hidden = true;
   $('#app').hidden = false;
@@ -271,7 +291,7 @@ function renderToday() {
     stats.streak > 0 ? `${icon('flame')}${stats.streak}일` : `${icon('flame')}오늘 시작`;
   $('#points-pill').innerHTML = `${icon('star')}${num(stats.totalPoints)}`;
 
-  $('#today-poem').innerHTML = poemHtml(poem, { eyebrow: '오늘의 시' });
+  $('#today-poem').innerHTML = poemHtml(poem);
   $('#mission-list').innerHTML = missions.map(missionHtml).join('');
 
   const left = missions.filter((m) => !m.completed).length;
@@ -281,8 +301,8 @@ function renderToday() {
   done.hidden = left > 0;
   if (!left) {
     done.innerHTML =
-      mascot('happy').replace('<svg', '<svg style="width:44px;height:44px"') +
-      `<p style="margin:0">${
+      mascot('happy') +
+      `<p>${
         stats.streak > 1
           ? `오늘 몫을 다 읽었습니다.<br>${stats.streak}일째 이어 가는 중입니다.`
           : '오늘 몫을 다 읽었습니다.<br>내일 또 한 편이 기다립니다.'
@@ -294,13 +314,12 @@ function renderToday() {
 }
 
 /** 원고지 조판. 연은 배열이고, 연 안의 행은 줄바꿈으로 유지합니다. */
-function poemHtml(poem, { eyebrow = '' } = {}) {
+function poemHtml(poem) {
   const stanzas = poem.stanzas
     .map((lines) => `<p class="stanza">${esc(lines.join('\n'))}</p>`)
     .join('');
   const tags = (poem.themes || []).map((t) => `<span class="tag">${esc(t)}</span>`).join('');
   return `
-    ${eyebrow ? `<p class="poem-eyebrow">${esc(eyebrow)}</p>` : ''}
     <h2 class="poem-title">${esc(poem.title)}${
       poem.hanja ? `<span class="hanja">${esc(poem.hanja)}</span>` : ''
     }</h2>
@@ -455,7 +474,7 @@ async function loadLibrary() {
 
 async function openPoem(poemId) {
   const { poem } = await api(`/poems/${poemId}`);
-  $('#poem-dialog-body').innerHTML = `<div class="manuscript" style="border-radius:0;border-left-width:3px">${poemHtml(poem)}</div>`;
+  $('#poem-dialog-body').innerHTML = `<div class="manuscript is-sheet">${poemHtml(poem)}</div>`;
   $('#poem-dialog').showModal();
   const earned = await markPoemRead(poemId);
   if (earned?.length) loadLibrary();
@@ -775,10 +794,10 @@ function renderPushPanel(push) {
     ${toggle('missionPush', '미션 발행', p.missionPush)}
     ${toggle('challengePush', '도전과제 달성', p.challengePush)}
     <div class="switch-row"><span>방해 금지</span>
-      <span style="display:flex;gap:6px;align-items:center">
+      <span class="quiet-range">
         <input type="number" min="0" max="23" data-pref="quietStart" value="${p.quietStart ?? ''}"
                placeholder="22" aria-label="방해 금지 시작 시각" />
-        <span style="color:var(--ink-mute)">~</span>
+        <span>~</span>
         <input type="number" min="0" max="23" data-pref="quietEnd" value="${p.quietEnd ?? ''}"
                placeholder="7" aria-label="방해 금지 끝 시각" />
       </span></div>
@@ -850,11 +869,30 @@ async function disablePush() {
 applyTheme(currentTheme());
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 
-try {
-  const { user } = await api('/auth/me');
-  if (user.profileCompleted === false) await showWelcome(user);
-  else await enterApp(user);
-} catch {
-  showGate();
-  loadProviders();
+/**
+ * 앱을 띄웁니다.
+ *
+ * "로그인하지 않은 것"과 "서버에 닿지 못한 것"은 다른 상황이라 나눠서 다룹니다.
+ * 전자는 로그인 화면으로, 후자는 다시 시도할 수 있는 안내로 보냅니다.
+ * (배포 환경에서 서버가 잠들었다 깨어나는 동안에도 이 화면이 보입니다.)
+ */
+async function start() {
+  boot.show('잠시만요, 별을 헤아리는 중입니다.');
+  try {
+    const { user } = await api('/auth/me');
+    if (user.profileCompleted === false) await showWelcome(user);
+    else await enterApp(user);
+  } catch (err) {
+    if (err.status === 401) {
+      showGate();
+      loadProviders();
+      return;
+    }
+    boot.show('서버에 닿지 못했습니다. 잠시 뒤에 다시 시도해 주세요.', {
+      retry: true,
+      mood: 'sleep',
+    });
+  }
 }
+
+await start();

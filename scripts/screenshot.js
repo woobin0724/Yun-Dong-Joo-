@@ -73,6 +73,22 @@ const collect = async (where) => {
   for (const issue of await audit()) allIssues.add(`[${where}] ${issue}`);
 };
 
+// ── 첫 화면 대기 ──
+// 로그인 확인이 끝나기 전 상태를 잡으려면 응답을 잠깐 붙잡아 둬야 한다.
+let delayedOnce = false;
+await page.route('**/api/auth/me', async (route) => {
+  if (!delayedOnce) {
+    delayedOnce = true;
+    await new Promise((r) => setTimeout(r, 900));
+  }
+  await route.continue();
+});
+await page.goto(BASE);
+await page.waitForSelector('#boot:not([hidden])');
+await shot('00-boot', false);
+await page.waitForLoadState('networkidle'); // 요청이 끝난 뒤에 라우트를 걷는다
+await page.unroute('**/api/auth/me');
+
 // ── 로그인 화면 ──
 await page.goto(BASE, { waitUntil: 'networkidle' });
 await page.waitForSelector('#gate:not([hidden])');
@@ -155,6 +171,22 @@ await setTheme('light');
 await page.waitForTimeout(300);
 await shot('11-me-light');
 
+// ── 데스크톱 폭에서 한 바퀴 더 ──
+// 모바일만 고치고 넓은 화면을 방치하는 일이 흔하다.
+await page.setViewportSize({ width: 1280, height: 900 });
+await setTheme('dark');
+for (const [view, name] of [
+  ['today', '12-today-wide'],
+  ['room', '13-room-wide'],
+  ['me', '14-me-wide'],
+]) {
+  await page.click(`.tab[data-view="${view}"]`);
+  await page.waitForTimeout(500);
+  await shot(name, view !== 'room');
+  await collect(`${view}(넓은 화면)`);
+}
+await page.setViewportSize({ width: 360, height: 780 });
+
 // ── 확인 ──
 const fontFamily = await page.evaluate(() => {
   const el = document.querySelector('.poem-title');
@@ -162,11 +194,28 @@ const fontFamily = await page.evaluate(() => {
 });
 const fontLoaded = await page.evaluate(() => document.fonts.check('16px "Gowun Batang"'));
 
+// 한 줄에 몇 글자가 들어가는지 (한국어는 35~45자가 읽기 좋다)
+await page.click('.tab[data-view="today"]');
+await page.waitForTimeout(400);
+const measure = await page.evaluate(() => {
+  const el = document.querySelector('.poem-body .stanza');
+  if (!el) return null;
+  const style = getComputedStyle(el);
+  const probe = document.createElement('span');
+  probe.style.cssText = `font:${style.font};visibility:hidden;position:absolute;white-space:nowrap`;
+  probe.textContent = '가';
+  document.body.append(probe);
+  const glyph = probe.getBoundingClientRect().width;
+  probe.remove();
+  return Math.round(el.getBoundingClientRect().width / glyph);
+});
+
 await browser.close();
 
 console.log(`\n저장 위치: ${OUT}/`);
 console.log(`시 글꼴: ${fontFamily}`);
 console.log(`Gowun Batang 로드됨: ${fontLoaded ? '예' : '아니요'}`);
+console.log(`시 본문 한 줄: 약 ${measure}자`);
 
 // 로그인 전 /api/auth/me 가 401 을 주는 건 정상이라 걸러 냅니다.
 const realErrors = consoleErrors.filter((e) => !e.includes('401'));
