@@ -57,10 +57,13 @@ export const config = {
     privateKey: process.env.VAPID_PRIVATE_KEY || '',
     subject: process.env.VAPID_SUBJECT || 'mailto:admin@example.com',
   },
-  // 로그인·가입 무차별 시도 제한. 테스트에서는 사실상 끈다.
+  /**
+   * IP 기준 제한. 학교처럼 한 회선을 여럿이 쓰는 곳을 막지 않도록 느슨하게 둔다.
+   * 무차별 대입에 대한 진짜 방어는 services/login-guard.js 의 계정별 실패 횟수다.
+   */
   authRateLimit: {
     windowMs: 5 * 60_000,
-    max: Number(process.env.AUTH_RATE_LIMIT_MAX || (isTest ? 100_000 : 20)),
+    max: Number(process.env.AUTH_RATE_LIMIT_MAX || (isTest ? 100_000 : 120)),
   },
   // 초대 코드 무차별 대입 방지. 사람은 코드를 몇 번씩 잘못 치지 않는다.
   joinRateLimit: {
@@ -72,6 +75,10 @@ export const config = {
     clientId: process.env.GOOGLE_CLIENT_ID || '',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     redirectUri: process.env.GOOGLE_REDIRECT_URI || '',
+    // 개발용 가짜 구글 서버 주소. 운영에서는 무시한다 — 실수로 켜 두면
+    // 아무나 로그인할 수 있게 되기 때문이다.
+    fakeBase:
+      process.env.NODE_ENV === 'production' ? '' : process.env.GOOGLE_FAKE_BASE || '',
   },
   missionPublishHour: Number(process.env.MISSION_PUBLISH_HOUR ?? 6),
   poemPushHours: hours(process.env.POEM_PUSH_HOURS, [8, 21]),

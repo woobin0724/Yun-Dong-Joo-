@@ -16,7 +16,9 @@
     "shots": "node scripts/screenshot.js",
     "contrast": "node scripts/check-contrast.js",
     "icons": "node scripts/make-icons.js",
-    "fonts": "node scripts/fetch-fonts.js"
+    "fonts": "node scripts/fetch-fonts.js",
+    "fake-google": "node scripts/fake-google-server.js",
+    "verify:google": "node scripts/verify-google-login.js"
   },
   "dependencies": {
     "express": "^5.1.0",

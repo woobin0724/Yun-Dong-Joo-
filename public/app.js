@@ -104,10 +104,53 @@ $('#textsize-select').addEventListener('change', (e) => {
 });
 
 // ───────── 로그인 ─────────
+const AUTH_ERRORS = {
+  cancelled: '구글 로그인을 취소하셨습니다.',
+  state: '로그인 절차가 만료되었습니다. 다시 시도해 주세요.',
+  unverified: '구글에서 이메일 확인이 끝나지 않은 계정입니다.',
+  google: '구글 로그인에 실패했습니다. 잠시 뒤에 다시 시도해 주세요.',
+};
+
 function showGate() {
   $('#gate').hidden = false;
+  $('#welcome').hidden = true;
   $('#app').hidden = true;
+
+  // 구글에서 돌아오며 실려 온 오류를 보여 주고 주소는 깨끗이 지웁니다.
+  const reason = new URLSearchParams(location.search).get('auth_error');
+  if (reason) {
+    $('#gate-error').textContent = AUTH_ERRORS[reason] || AUTH_ERRORS.google;
+    history.replaceState(null, '', location.pathname + location.hash);
+  }
 }
+
+/** 구글로 갓 들어온 사람에게 이름·아이디를 받습니다. */
+async function showWelcome(user) {
+  state.user = user;
+  $('#gate').hidden = true;
+  $('#app').hidden = true;
+  $('#welcome').hidden = false;
+
+  const form = $('#welcome-form');
+  form.displayName.value = user.displayName || '';
+  form.handle.value = user.handle || '';
+}
+
+$('#welcome-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = new FormData(e.target);
+  try {
+    const { user } = await api('/me/profile', {
+      method: 'PATCH',
+      body: { handle: form.get('handle'), displayName: form.get('displayName') },
+    });
+    $('#welcome').hidden = true;
+    await enterApp(user);
+    toast('반갑습니다. 오늘의 시부터 펼쳐 보세요.', { tone: 'star', iconName: 'star' });
+  } catch (err) {
+    $('#welcome-error').textContent = err.message;
+  }
+});
 
 const gateTabs = [
   { btn: $('#tab-login'), form: $('#login-form') },
@@ -163,17 +206,26 @@ $('#logout-btn').addEventListener('click', async () => {
   location.reload();
 });
 
-/** 서버가 켜 둔 로그인 수단만 보여 줍니다. */
+/**
+ * 서버가 켜 둔 로그인 수단만 보여 줍니다.
+ * 구글 로그인을 쓰면 이메일 주소를 받게 되므로 안내 문구도 그에 맞춰 바꿉니다
+ * — 받는 것을 사실대로 적어야 합니다.
+ */
 async function loadProviders() {
+  let google = false;
   try {
-    const { google } = await api('/auth/providers');
-    $('#google-area').hidden = !google;
+    ({ google } = await api('/auth/providers'));
   } catch {
-    $('#google-area').hidden = true;
+    google = false;
   }
+  $('#google-area').hidden = !google;
+  $('#privacy-note').textContent = google
+    ? '화면에는 이름과 아이디만 보입니다. 구글로 들어오시면 계정을 알아보는 데에만 이메일 주소를 씁니다.'
+    : '이 앱은 아이디와 이름만 받습니다.';
 }
 
 $('#google-btn').addEventListener('click', () => {
+  // 서버가 state 와 PKCE 를 만들어 쿠키에 심고 구글로 보냅니다.
   location.href = '/api/auth/google/start';
 });
 
@@ -800,7 +852,8 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').cat
 
 try {
   const { user } = await api('/auth/me');
-  await enterApp(user);
+  if (user.profileCompleted === false) await showWelcome(user);
+  else await enterApp(user);
 } catch {
   showGate();
   loadProviders();

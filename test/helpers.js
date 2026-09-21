@@ -19,11 +19,36 @@ export async function startTestServer() {
           ...(cookie ? { Cookie: cookie } : {}),
         },
         body: body ? JSON.stringify(body) : undefined,
+        // 리다이렉트를 따라가지 않아야 Location 을 확인할 수 있다 (구글 로그인 흐름).
+        redirect: 'manual',
       });
-      const setCookie = res.headers.getSetCookie?.() ?? [];
-      for (const raw of setCookie) cookie = raw.split(';')[0];
+
+      // 쿠키는 클라이언트가 계속 들고 다닌다. 지우라는 응답이면 지운다.
+      for (const raw of res.headers.getSetCookie?.() ?? []) {
+        const [pair] = raw.split(';');
+        const [name, value] = pair.split('=');
+        const jar = new Map(
+          cookie ? cookie.split('; ').map((c) => c.split('=').map((x, i) => (i ? c.slice(c.indexOf('=') + 1) : x))) : [],
+        );
+        if (value === '' || /expires=Thu, 01 Jan 1970/i.test(raw)) jar.delete(name);
+        else jar.set(name, value);
+        cookie = [...jar].map(([k, v]) => `${k}=${v}`).join('; ');
+      }
+
       const text = await res.text();
-      return { status: res.status, body: text ? JSON.parse(text) : {} };
+      let parsed = {};
+      if (text) {
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+          parsed = { raw: text }; // 리다이렉트나 HTML 응답
+        }
+      }
+      return {
+        status: res.status,
+        body: parsed,
+        headers: Object.fromEntries(res.headers),
+      };
     };
   };
 

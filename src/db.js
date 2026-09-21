@@ -181,6 +181,47 @@ const MIGRATIONS = [
       UPDATE cheers SET kind = 'sparkle' WHERE kind = 'clap';
     `,
   },
+  {
+    name: '003-auth-identities',
+    // users 테이블을 다시 만든다.
+    // SQLite 는 컬럼의 NOT NULL 을 나중에 풀 수 없어서, 공식 문서가 권하는
+    // "새 표를 만들고 옮겨 담고 바꿔치기" 절차를 그대로 따른다.
+    // 이 동안에는 외래키 검사를 꺼야 하므로 아래 flag 를 둔다.
+    foreignKeysOff: true,
+    sql: `
+      CREATE TABLE users_new (
+        id                INTEGER PRIMARY KEY AUTOINCREMENT,
+        handle            TEXT NOT NULL UNIQUE,
+        display_name      TEXT NOT NULL,
+        -- 구글 로그인만 쓰는 계정은 PIN 이 없다.
+        pin_hash          TEXT,
+        pin_salt          TEXT,
+        created_at        TEXT NOT NULL,
+        last_active_day   TEXT,
+        -- 구글로 갓 만든 계정은 이름·아이디를 아직 정하지 않았다.
+        profile_completed INTEGER NOT NULL DEFAULT 1
+      );
+
+      INSERT INTO users_new (id, handle, display_name, pin_hash, pin_salt, created_at, last_active_day)
+        SELECT id, handle, display_name, pin_hash, pin_salt, created_at, last_active_day FROM users;
+
+      DROP TABLE users;
+      ALTER TABLE users_new RENAME TO users;
+
+      -- 로그인 수단. 한 사람이 아이디+PIN 과 구글을 함께 가질 수 있다.
+      CREATE TABLE auth_identities (
+        id               INTEGER PRIMARY KEY AUTOINCREMENT,
+        provider         TEXT NOT NULL,          -- 'google'
+        provider_user_id TEXT NOT NULL,          -- 구글의 sub
+        user_id          INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        email            TEXT,                   -- 계정 식별용으로만 쓴다. 화면에 내보내지 않는다.
+        created_at       TEXT NOT NULL,
+        last_login_at    TEXT,
+        UNIQUE (provider, provider_user_id)
+      );
+      CREATE INDEX idx_identities_user ON auth_identities(user_id);
+    `,
+  },
 ];
 
 function applyMigrations(database) {
@@ -195,6 +236,11 @@ function applyMigrations(database) {
   );
   for (const migration of MIGRATIONS) {
     if (applied.has(migration.name)) continue;
+
+    // 표를 통째로 바꿔치기하는 마이그레이션은 외래키 검사를 잠시 꺼야 한다.
+    // (SQLite 문서의 권장 절차. PRAGMA 는 트랜잭션 밖에서 걸어야 먹는다.)
+    if (migration.foreignKeysOff) database.exec('PRAGMA foreign_keys = OFF');
+
     database.exec('BEGIN');
     try {
       database.exec(migration.sql);
@@ -204,7 +250,20 @@ function applyMigrations(database) {
       database.exec('COMMIT');
     } catch (err) {
       database.exec('ROLLBACK');
+      if (migration.foreignKeysOff) database.exec('PRAGMA foreign_keys = ON');
       throw new Error(`마이그레이션 실패 (${migration.name}): ${err.message}`, { cause: err });
+    }
+
+    if (migration.foreignKeysOff) {
+      database.exec('PRAGMA foreign_keys = ON');
+      // 바꿔치기 뒤에 끊어진 참조가 없는지 꼭 확인한다.
+      const broken = database.prepare('PRAGMA foreign_key_check').all();
+      if (broken.length) {
+        throw new Error(
+          `마이그레이션 뒤 외래키가 깨졌습니다 (${migration.name}): ` +
+            JSON.stringify(broken.slice(0, 5)),
+        );
+      }
     }
   }
 }

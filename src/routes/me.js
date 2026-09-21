@@ -14,6 +14,7 @@ import {
   subscriptionCount,
   sendToUser,
 } from '../services/push.js';
+import { completeProfile, loginMethods, suggestHandle } from '../services/users.js';
 import { requireAuth, asyncRoute } from './middleware.js';
 
 export const meRouter = Router();
@@ -31,6 +32,33 @@ meRouter.get('/', (req, res) => {
     readPoemIds: poemReadIds(req.user.id),
     activity: dailySeries(req.user.id, 21),
   });
+});
+
+/** 로그인 수단 — 계정 화면에서 "구글 연결됨" 같은 것을 보여 주는 데 쓴다. */
+meRouter.get('/login-methods', (req, res) => {
+  res.json(loginMethods(req.user.id));
+});
+
+/**
+ * 구글로 갓 들어온 사람이 이름·아이디를 정하는 단계.
+ * 아이디를 비워 보내면 지금 것을 그대로 둔다.
+ */
+meRouter.patch(
+  '/profile',
+  asyncRoute((req, res) => {
+    const { handle, displayName } = req.body ?? {};
+    const user = completeProfile({
+      userId: req.user.id,
+      handle: handle?.trim() || req.user.handle,
+      displayName,
+    });
+    res.json({ user });
+  }),
+);
+
+/** 이름을 넣으면 쓸 수 있는 아이디를 하나 제안한다. */
+meRouter.get('/suggest-handle', (req, res) => {
+  res.json({ handle: suggestHandle(req.query.from || req.user.displayName) });
 });
 
 meRouter.get('/challenges', (req, res) => {

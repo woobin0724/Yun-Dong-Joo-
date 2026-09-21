@@ -132,10 +132,32 @@
     <p id="gate-error" class="form-error" role="alert"></p>
   </div>
 
-  <p class="gate-foot">
+  <p class="gate-foot" id="gate-foot">
     윤동주(1917~1945)의 작품은 저작권 보호기간이 지난 공유 저작물입니다.<br />
-    이 앱은 아이디와 이름만 받습니다.
+    <span id="privacy-note">이 앱은 아이디와 이름만 받습니다.</span>
   </p>
+</section>
+
+<!-- ════════════ 처음 오신 분 — 이름 정하기 ════════════ -->
+<section id="welcome" class="gate" hidden>
+  <div class="gate-inner">
+    <div class="gate-mark">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><use href="#m-cheer"/></svg>
+      <h1 class="gate-title">반갑습니다</h1>
+      <p class="gate-line">방에서 보일 이름을 정해 주세요.<br />나중에 바꿀 수 있습니다.</p>
+    </div>
+    <form id="welcome-form" class="gate-form">
+      <label class="field"><span>이름</span>
+        <input name="displayName" autocomplete="nickname" required maxlength="20" />
+        <small>같이 읽는 사람들에게 보이는 이름입니다</small></label>
+      <label class="field"><span>아이디</span>
+        <input name="handle" autocomplete="username" required />
+        <small>한글·영문·숫자 2~20자</small></label>
+      <button class="btn btn-primary btn-block" type="submit">시작하기</button>
+    </form>
+    <p id="welcome-error" class="form-error" role="alert"></p>
+  </div>
+  <p class="gate-foot">이 앱은 이름과 아이디만 화면에 보여 줍니다.<br />구글에서 받은 이메일은 계정을 알아보는 데만 씁니다.</p>
 </section>
 
 <!-- ════════════ 본 화면 ════════════ -->
