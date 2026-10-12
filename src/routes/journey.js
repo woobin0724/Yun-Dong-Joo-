@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from './middleware.js';
 import { POEMS } from '../content/poems.js';
+import { goalState } from '../services/goal.js';
 import {
   mapFor,
   openNode,
@@ -17,7 +18,7 @@ journeyRouter.use(requireAuth);
 /** 지도. 홈 화면이 이것 하나만 받아서 그린다. */
 journeyRouter.get('/', (req, res) => {
   const map = mapFor(req.user.id);
-  res.json({ ...map, unverifiedFacts: unverifiedFactCount() });
+  res.json({ ...map, unverifiedFacts: unverifiedFactCount(), goal: goalState(req.user.id) });
 });
 
 /** 마디를 연다. 걸음 목록과 시 본문이 함께 간다. */

@@ -21,6 +21,7 @@ missionsRouter.get('/today', (req, res) => {
     remaining: missions.filter((m) => !m.completed).length,
     stats: {
       streak: stats.streak,
+      freezes: stats.freezes,
       bestStreak: stats.bestStreak,
       totalPoints: stats.totalPoints,
       poemsRead: stats.poemsRead,

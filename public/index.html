@@ -210,6 +210,7 @@
         </div>
         <div id="path-meter" class="meter meter-lg" role="progressbar"
              aria-label="걸어온 길" aria-valuemin="0" aria-valuemax="100"><i></i></div>
+        <p id="path-goal" class="path-goal" hidden></p>
       </div>
 
       <button id="path-cta" class="btn btn-primary btn-block cta" type="button" hidden>
@@ -287,6 +288,11 @@
     </section>
 
     <section class="view" data-view="ranking" hidden>
+      <!-- 주간 리그 — 올라가기만 합니다. 한 주를 쉬어도 잃는 것이 없어야
+           시험 기간이나 아픈 주에 앱을 여는 일이 벌이 되지 않습니다. -->
+      <div class="section-head"><h2>이번 주 리그</h2><span id="league-week" class="muted"></span></div>
+      <div id="league" class="league"></div>
+
       <div class="section-head"><h2>랭킹</h2></div>
       <div class="segmented" id="ranking-scope" role="tablist" aria-label="범위">
         <button type="button" role="tab" data-scope="room" aria-selected="true">우리 방</button>
@@ -325,6 +331,10 @@
       <div id="push-panel" class="panel"></div>
       <div class="section-head"><h2>보기 설정</h2></div>
       <div class="panel">
+        <label class="switch-row"><span>하루 목표</span>
+          <select id="goal-select">
+            <option value="1">한 마디</option><option value="2">두 마디</option><option value="3">세 마디</option>
+          </select></label>
         <label class="switch-row"><span>글씨 크기</span>
           <select id="textsize-select">
             <option value="">보통</option><option value="large">크게</option><option value="xlarge">아주 크게</option>
@@ -445,6 +455,22 @@
     <p id="exam-feedback" class="lesson-feedback" role="status" hidden></p>
     <button id="exam-next" class="btn btn-primary btn-block btn-lg" type="button">확인</button>
   </footer>
+</section>
+
+<!-- ══════════════ 처음 들어왔을 때 ══════════════
+     묻는 것은 하나뿐입니다. 고르면 곧장 첫 마디로 들어갑니다. 첫 레슨까지
+     가는 길이 짧을수록 다시 옵니다. -->
+<section id="onboard" class="lesson onboard" hidden aria-labelledby="onboard-h">
+  <div class="lesson-body onboard-body">
+    <svg viewBox="0 0 64 64" class="mascot" aria-hidden="true"><use href="#m-default" /></svg>
+    <h2 id="onboard-h" class="onboard-h">하루에 몇 마디 걸을까요?</h2>
+    <p class="step-note">마디 하나는 시 한 편이고 3분쯤 걸립니다. 나중에 <span class="nowrap">「나」에서</span> 바꿀 수 있습니다.</p>
+    <div class="choices" id="onboard-goals">
+      <button class="choice" type="button" data-goal="1"><b>한 마디</b><span>하루 3분쯤</span></button>
+      <button class="choice" type="button" data-goal="2"><b>두 마디</b><span>하루 6분쯤</span></button>
+      <button class="choice" type="button" data-goal="3"><b>세 마디</b><span>하루 10분쯤</span></button>
+    </div>
+  </div>
 </section>
 
 <div id="toasts" class="toasts" aria-live="polite"></div>

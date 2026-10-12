@@ -16,6 +16,7 @@ import {
 } from '../services/push.js';
 import { completeProfile, loginMethods, suggestHandle } from '../services/users.js';
 import { requireAuth, asyncRoute } from './middleware.js';
+import { goalState, setGoal } from '../services/goal.js';
 
 export const meRouter = Router();
 
@@ -31,7 +32,19 @@ meRouter.get('/', (req, res) => {
     rooms: listRoomsForUser(req.user.id),
     readPoemIds: poemReadIds(req.user.id),
     activity: dailySeries(req.user.id, 21),
+    goal: goalState(req.user.id),
   });
+});
+
+/** 하루 목표. 온보딩에서 처음 고르고, 「나」에서 바꾼다. */
+meRouter.get('/goal', (req, res) => {
+  res.json(goalState(req.user.id));
+});
+
+meRouter.put('/goal', (req, res) => {
+  const result = setGoal(req.user.id, req.body?.goal);
+  if (result.error) return res.status(400).json({ error: '하루 목표는 1, 2, 3 마디 중에서 고를 수 있습니다.' });
+  res.json(goalState(req.user.id));
 });
 
 /** 로그인 수단 — 계정 화면에서 "구글 연결됨" 같은 것을 보여 주는 데 쓴다. */

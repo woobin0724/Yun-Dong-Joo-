@@ -1,6 +1,6 @@
-import { eulReul, eunNeun } from '/lib/korean.js';
+import { eulReul, eunNeun, euroRo, iGa } from '/lib/korean.js';
 
-export { eulReul, eunNeun };
+export { eulReul, eunNeun, euroRo, iGa };
 
 /* 별 헤는 밤 — 화면들이 함께 쓰는 것들.
    빌드 도구가 없으므로 표준 ES 모듈로 나눕니다. app.js 하나가 계속

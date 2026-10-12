@@ -7,7 +7,7 @@ import { CHALLENGES } from '../src/content/challenges.js';
 import { BACKGROUND_QUIZ } from '../src/content/quiz-bank.js';
 import { eulReul, eunNeun, iGa, gwaWa, euroRo } from '../src/lib/korean.js';
 import { addDays, daysBetween, weekStart, dayKey } from '../src/lib/date.js';
-import { computeStreaks } from '../src/services/stats.js';
+import { computeStreaks, computeStreakState, FREEZE_EVERY, FREEZE_MAX } from '../src/services/stats.js';
 
 test('시 데이터가 온전하다', () => {
   assert.ok(POEMS.length >= 15, '작품이 충분히 실려 있어야 한다');
@@ -171,4 +171,52 @@ test('사용자에게 나가는 문구에 이모지를 쓰지 않는다', async 
     const found = source.split('\n').find((line) => pictographic.test(line));
     assert.equal(found, undefined, `src/${file} 에 이모지가 남아 있습니다: ${found}`);
   }
+});
+
+// ── 쉼표(스트릭 프리즈) ──
+
+/** start 부터 n 일 연속한 날 목록. */
+const run = (start, n) => Array.from({ length: n }, (_, i) => addDays(start, i));
+
+test('쉼표 — 이레 연속하면 하나 얻는다', () => {
+  const days = run('2026-09-01', FREEZE_EVERY);
+  const s = computeStreakState(days, days.at(-1));
+  assert.equal(s.streak, FREEZE_EVERY);
+  assert.equal(s.freezes, 1);
+});
+
+test('쉼표 — 하루 비면 쉼표를 쓰고 연속이 이어진다(쉰 날은 세지 않는다)', () => {
+  const week = run('2026-09-01', 7); // 9/1~9/7, 쉼표 1
+  const after = ['2026-09-09']; // 9/8 하루 쉼
+  const s = computeStreakState([...week, ...after], '2026-09-09');
+  assert.equal(s.streak, 8, '쉰 날은 연속 일수에 더하지 않습니다');
+  assert.equal(s.freezes, 0);
+  assert.deepEqual(s.frozenDays, ['2026-09-08']);
+});
+
+test('쉼표 — 쉼표보다 많이 비면 끊긴다', () => {
+  const week = run('2026-09-01', 7); // 쉼표 1
+  const s = computeStreakState([...week, '2026-09-10'], '2026-09-10'); // 9/8, 9/9 이틀 쉼
+  assert.equal(s.streak, 1);
+  assert.equal(s.freezes, 0, '끊기면 들고 있던 쉼표도 사라집니다');
+  assert.equal(s.bestStreak, 7);
+});
+
+test('쉼표 — 오늘은 빈 날이 아니고, 어제 하루 빈 것은 쉼표로 덮인다', () => {
+  const week = run('2026-09-01', 7); // 마지막 9/7, 쉼표 1
+  // 오늘 9/9: 9/8 하루가 비었지만 쉼표가 있다
+  const s = computeStreakState(week, '2026-09-09');
+  assert.equal(s.streak, 7);
+  assert.equal(s.freezes, 0);
+  assert.deepEqual(s.frozenDays, ['2026-09-08']);
+});
+
+test(`쉼표 — ${FREEZE_MAX}개까지만 쌓인다`, () => {
+  const days = run('2026-09-01', FREEZE_EVERY * 4);
+  assert.equal(computeStreakState(days, days.at(-1)).freezes, FREEZE_MAX);
+});
+
+test('쉼표 — 같은 기록으로 두 번 셈해도 답이 같다', () => {
+  const days = [...run('2026-09-01', 7), '2026-09-09'];
+  assert.deepEqual(computeStreakState(days, '2026-09-10'), computeStreakState(days, '2026-09-10'));
 });

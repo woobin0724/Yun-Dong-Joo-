@@ -314,6 +314,13 @@ const MIGRATIONS = [
       );
     `,
   },
+  {
+    name: '007-daily-goal',
+    sql: `
+      -- 하루에 몇 마디를 걸지. 비어 있으면 아직 처음 들어온 사람이다(온보딩).
+      ALTER TABLE users ADD COLUMN daily_goal INTEGER;
+    `,
+  },
 ];
 
 function applyMigrations(database) {

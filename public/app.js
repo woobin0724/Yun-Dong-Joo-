@@ -4,7 +4,7 @@
 
 import {
   $, $$, esc, icon, mascot, num, api, toast,
-  poemBodyHtml, poemHtml, formatWritten,
+  poemBodyHtml, poemHtml, formatWritten, euroRo,
 } from './core.js';
 import { mountJourney, loadJourney } from './journey.js';
 import { mountTranscribe, openTranscribe, layout } from './transcribe.js';
@@ -259,8 +259,17 @@ async function loadToday() {
 
 /** 상단 알약. 길에서 점수가 오르면 레슨 화면에서도 이걸 부릅니다. */
 function renderPills(stats) {
+  // 쉼표는 연속 옆에 작게. 하루를 쉬어도 이어진다는 것을 미리 알고 있어야
+  // 하루 빠진 날 '이제 다 끝났다' 고 앱을 지우지 않는다.
+  const freeze = stats.freezes ? ` · 쉼표 ${stats.freezes}` : '';
   $('#streak-pill').innerHTML =
-    stats.streak > 0 ? `${icon('flame')}${stats.streak}일` : `${icon('flame')}오늘 시작`;
+    stats.streak > 0 ? `${icon('flame')}${stats.streak}일${freeze}` : `${icon('flame')}오늘 시작`;
+  $('#streak-pill').setAttribute(
+    'aria-label',
+    stats.streak > 0
+      ? `연속 ${stats.streak}일${stats.freezes ? `, 쉼표 ${stats.freezes}개 — 하루를 쉬어도 이어집니다` : ''}`
+      : '오늘 시작',
+  );
   $('#points-pill').innerHTML = `${icon('star')}${num(stats.totalPoints)}`;
 }
 
@@ -679,7 +688,53 @@ function bindSegmented(id, key, onChange) {
 bindSegmented('ranking-scope', 'scope', () => loadRanking());
 bindSegmented('ranking-period', 'period', () => loadRanking());
 
+async function loadLeague() {
+  let t;
+  try {
+    t = await api('/ranking/league');
+  } catch {
+    return;
+  }
+  const l = t.league;
+  const ends = new Date(`${l.weekEnds}T00:00:00`).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
+  $('#league-week').textContent = `${ends}까지`;
+
+  // 등급 사다리. 지금 자리와 다음 자리만 또렷하게.
+  const ladder = ['한 줄', '한 연', '한 편', '시집']
+    .map((name, i) => `<li data-state="${i < l.tierIndex ? 'past' : i === l.tierIndex ? 'here' : 'ahead'}">${name}</li>`)
+    .join('');
+
+  const status = l.top
+    ? '맨 위 등급입니다. 더 올라갈 곳은 없고, 내려가는 일도 없습니다.'
+    : l.promotesNextWeek
+      ? `이번 주 문턱을 넘었습니다. 다음 주에 「${esc(l.next.name)}」${euroRo(l.next.name)} 올라갑니다.`
+      : `「${esc(l.next.name)}」까지 이번 주 <b>${num(l.remaining)}점</b> 남았습니다.`;
+
+  const rows = t.rows
+    .map(
+      (r) => `<li class="rank-row" data-me="${r.me}">
+        <span class="rank-no">${r.rank}</span>
+        <span>${r.me ? '나' : esc(r.name ?? '')}</span>
+        <span class="rank-points">${num(r.points)}</span>
+      </li>`,
+    )
+    .join('');
+
+  $('#league').innerHTML = `
+    <ol class="league-ladder" aria-label="등급">${ladder}</ol>
+    <p class="league-status">${status}</p>
+    ${
+      l.top
+        ? ''
+        : `<div class="meter meter-lg" role="progressbar" aria-label="이번 주 문턱까지" aria-valuemin="0" aria-valuemax="${l.threshold}" aria-valuenow="${l.points}"><i style="--fill:${Math.min(1, l.points / l.threshold).toFixed(3)}"></i></div>`
+    }
+    <p class="note">내려가는 일은 없습니다. 한 주를 쉬어도 등급은 그대로입니다.</p>
+    <h3 class="league-sub">「${esc(l.tier.name)}」에 있는 ${num(t.size)}명</h3>
+    <ol class="rank-list">${rows}</ol>`;
+}
+
 async function loadRanking() {
+  loadLeague();
   const { scope, period } = state.ranking;
   const useRoom = scope === 'room' && state.activeRoomId;
   const { ranking, me } = await api(
@@ -688,7 +743,7 @@ async function loadRanking() {
 
   if (!ranking.length) {
     $('#rank-list').innerHTML =
-      '<li class="rank-me-note">아직 기록이 없습니다. 오늘의 미션을 먼저 해 보세요.</li>';
+      '<li class="rank-me-note">아직 기록이 없습니다. 길을 한 마디 걸어 보세요.</li>';
     $('#rank-me').textContent = '';
     return;
   }
@@ -764,7 +819,17 @@ async function loadMe() {
 
   const size = document.documentElement.dataset.textsize || '';
   $('#textsize-select').value = size;
+  if (me.goal?.goal) $('#goal-select').value = String(me.goal.goal);
 }
+
+$('#goal-select').addEventListener('change', async (e) => {
+  try {
+    await api('/me/goal', { method: 'PUT', body: { goal: Number(e.target.value) } });
+    toast('하루 목표를 바꿨습니다.');
+  } catch (err) {
+    toast(err.message);
+  }
+});
 
 /** 걸어온 길 — 장마다 몇 마디를 걸었는지. 아직 걷지 않은 장도 길 위에 그대로 둡니다. */
 function renderWalked(journey) {

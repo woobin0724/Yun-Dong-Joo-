@@ -50,6 +50,9 @@ function renderMap() {
     cta.dataset.node = map.next ?? '';
   }
 
+  renderGoal(map.goal);
+  if (map.goal?.needsOnboarding && !onboardShown) showOnboarding();
+
   $('#chapter-note').innerHTML = noteHtml(map.chapterNote);
   const currentChapter = findNode(map.next)?.chapterId ?? null;
   $('#path-map').innerHTML = map.chapters.map((c) => chapterHtml(c, currentChapter)).join('');
@@ -67,6 +70,43 @@ function renderMap() {
   for (const btn of $$('#path-map .node')) {
     btn.addEventListener('click', () => openLesson(btn.dataset.node));
   }
+}
+
+/** 오늘 몇 마디를 걸었는지. 목표를 채운 날은 한 번 더 말해 줍니다. */
+function renderGoal(goal) {
+  const el = $('#path-goal');
+  if (!goal || goal.goal === null) {
+    el.hidden = true;
+    return;
+  }
+  el.hidden = false;
+  el.dataset.met = String(goal.met);
+  el.innerHTML = goal.met
+    ? `${icon('check')}<span>오늘 목표를 채웠습니다 · ${num(goal.doneToday)} / ${num(goal.goal)} 마디</span>`
+    : `<span>오늘 ${num(goal.doneToday)} / ${num(goal.goal)} 마디</span>`;
+}
+
+let onboardShown = false;
+
+function showOnboarding() {
+  onboardShown = true;
+  $('#onboard').hidden = false;
+  document.body.dataset.lesson = 'open';
+  $('#onboard-goals .choice')?.focus();
+}
+
+async function chooseGoal(goal) {
+  try {
+    await api('/me/goal', { method: 'PUT', body: { goal } });
+  } catch (err) {
+    toast(err.message);
+    return;
+  }
+  $('#onboard').hidden = true;
+  delete document.body.dataset.lesson;
+  // 고르자마자 첫 마디로. 지도를 먼저 보여 주고 다시 누르게 하면 한 번 더 떠날 틈이 생긴다.
+  await loadJourney();
+  if (state.map?.next) openLesson(state.map.next);
 }
 
 /** **굵게** 만 지원하는 아주 작은 변환. 본문은 모두 우리가 쓴 글입니다. */
@@ -520,6 +560,9 @@ export function mountJourney({ onPoints, onTranscribe: tr } = {}) {
   if (tr) onTranscribe = tr;
 
   $('#path-cta').addEventListener('click', (e) => openLesson(e.currentTarget.dataset.node));
+  for (const btn of $$('#onboard-goals .choice')) {
+    btn.addEventListener('click', () => chooseGoal(Number(btn.dataset.goal)));
+  }
   $('#lesson-close').addEventListener('click', closeLesson);
   $('#lesson-next').addEventListener('click', (e) => {
     // finishLesson 이 onclick 을 갈아끼우므로, 그때는 이 핸들러가 비켜 줍니다.

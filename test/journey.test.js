@@ -469,3 +469,32 @@ test('빈칸은 낱말 자리만 지운다 — "내일" 안의 "내" 는 지우�
     }
   }
 });
+
+test('길만 걸어도 그날은 연속일에 든다', async () => {
+  // 예전에는 오늘의 미션을 한 날만 셌다. 핵심 고리가 길로 바뀐 뒤
+  // 길만 걷는 학생의 연속이 영원히 0 이었다.
+  const { call, user } = await fresh();
+  assert.equal((await call('/api/me')).body.stats.streak, 0);
+  await walkNode(call, user.id, NODES[0].id);
+  assert.equal((await call('/api/me')).body.stats.streak, 1);
+});
+
+test('처음 들어온 사람은 하루 목표가 없고, 고르면 온보딩이 끝난다', async () => {
+  const { call } = await fresh();
+  let g = (await call('/api/me/goal')).body;
+  assert.equal(g.needsOnboarding, true);
+  assert.equal((await call('/api/me/goal', { method: 'PUT', body: { goal: 5 } })).status, 400);
+  g = (await call('/api/me/goal', { method: 'PUT', body: { goal: 2 } })).body;
+  assert.equal(g.needsOnboarding, false);
+  assert.equal(g.goal, 2);
+  assert.equal(g.doneToday, 0);
+});
+
+test('오늘 걸은 마디가 하루 목표에 든다', async () => {
+  const { call, user } = await fresh();
+  await call('/api/me/goal', { method: 'PUT', body: { goal: 1 } });
+  await walkNode(call, user.id, NODES[0].id);
+  const g = (await call('/api/me/goal')).body;
+  assert.equal(g.doneToday, 1);
+  assert.equal(g.met, true);
+});

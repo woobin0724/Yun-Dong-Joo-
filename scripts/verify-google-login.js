@@ -96,7 +96,8 @@ await page.click('#google-btn');
 await page.waitForURL(/4100/, { timeout: 8000 });
 await page.click('#returning-user');
 await page.waitForSelector('#mission-list .mission', { timeout: 10000 });
-console.log('두 번째 로그인 — 환영 화면 건너뜀:', page.url().includes('#today'));
+// 홈이 '오늘' 에서 '길' 로 바뀌었다.
+console.log('두 번째 로그인 — 환영 화면 건너뜀:', page.url().includes('#path'));
 await shot('g6-returning');
 
 console.log(errs.length ? `앱 오류:\n  ${errs.join('\n  ')}` : '앱 오류 없음');

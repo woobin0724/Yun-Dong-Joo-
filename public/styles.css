@@ -1638,3 +1638,52 @@ details.chapter > .node-list { margin-top: var(--sp-3); }
 .exam-ledger { width: 100%; max-width: 20rem; margin: 0; padding: 0; list-style: none; display: grid; gap: var(--sp-2); }
 .exam-ledger li { display: flex; justify-content: space-between; padding: var(--sp-3) 0; border-bottom: 1px solid var(--line); font-size: var(--text-sm); }
 .exam-ledger b { font-variant-numeric: tabular-nums; }
+
+/* ═══════════════ 하루 목표 · 온보딩 ═══════════════ */
+.path-goal {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: var(--sp-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+.path-goal[data-met='true'] { color: var(--ok); }
+.path-goal .icon { width: 1em; height: 1em; }
+
+.onboard { grid-template-rows: 1fr; }
+.onboard-body { align-content: center; justify-items: center; text-align: center; gap: var(--sp-4); }
+.onboard-body svg.mascot { width: 56px; height: 56px; }
+.onboard-h { font-family: var(--font-poem); font-size: var(--text-xl); }
+.onboard-body .choices { width: 100%; max-width: 22rem; }
+.onboard-body .choice { justify-content: space-between; }
+.onboard-body .choice span { font-size: var(--text-sm); color: var(--ink-mute); }
+
+/* ═══════════════ 주간 리그 ═══════════════ */
+.league { display: grid; gap: var(--sp-3); }
+.league-ladder { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-1); margin: 0; padding: 0; list-style: none; }
+.league-ladder li {
+  display: grid;
+  place-items: center;
+  min-height: var(--tap);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font-family: var(--font-poem);
+  font-size: var(--text-sm);
+  color: var(--ink-mute);
+}
+.league-ladder li[data-state='past'] { border-color: var(--accent-line); color: var(--accent-ink); }
+.league-ladder li[data-state='here'] {
+  border: 1.5px solid var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+.league-ladder li[data-state='ahead'] { border-style: dashed; }
+.league-status { margin: 0; line-height: 1.7; }
+.league-sub { margin-top: var(--sp-3); font-size: var(--text-sm); color: var(--ink-soft); font-weight: 600; }
+.league .rank-list { margin-top: 0; }
+
+/* 낫표 뒤에서 줄이 끊기면 조사가 다음 줄로 떨어집니다(「나」 / 에서). */
+.nowrap { white-space: nowrap; }

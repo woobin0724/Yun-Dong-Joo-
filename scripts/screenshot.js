@@ -119,6 +119,17 @@ await page.fill('#signup-form [name=displayName]', '한결');
 await page.fill('#signup-form [name=pin]', '1234');
 await page.click('#signup-form button[type=submit]');
 await page.waitForSelector('#mission-list .mission', { timeout: 10000 });
+
+// 처음 들어온 사람에게는 하루 목표를 묻는 화면이 지도 위를 덮는다.
+// 고르면 곧장 첫 마디가 열리므로 그것도 닫고 지도로 돌아온다.
+await page.waitForSelector('#onboard:not([hidden])', { timeout: 10000 });
+await page.waitForTimeout(300);
+await shot('03a-onboarding', false);
+await collect('온보딩');
+await page.click('#onboard-goals [data-goal="1"]');
+await page.waitForSelector('#lesson:not([hidden])', { timeout: 10000 });
+await page.click('#lesson-close');
+await page.waitForTimeout(600);
 await page.waitForTimeout(700);
 await shot('03-today-paper');
 await collect('오늘');
