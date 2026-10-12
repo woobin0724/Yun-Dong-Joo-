@@ -300,10 +300,25 @@
     </section>
 
     <section class="view" data-view="me" hidden>
+      <!-- 「나」는 못 한 것의 목록이 아니라 한 것의 기록이 먼저입니다.
+           예전에는 첫날 0/23 도전과제가 3,242px 를 차지했습니다. -->
       <div id="me-head" class="me-head"></div>
+
+      <div class="section-head"><h2>걸어온 길</h2><span id="walked-count" class="muted"></span></div>
+      <div id="walked" class="walked"></div>
+
+      <div class="section-head"><h2>옮겨 적은 시</h2><span id="gallery-count" class="muted"></span></div>
+      <div id="gallery" class="gallery"></div>
+
+      <div class="section-head"><h2>남긴 한 줄</h2></div>
+      <div id="my-lines" class="my-lines"></div>
+
       <div id="me-stats"></div>
-      <div class="section-head"><h2>도전과제</h2><span id="challenge-count" class="muted"></span></div>
+
+      <details class="me-fold">
+        <summary class="section-head"><h2>도전과제</h2><span id="challenge-count" class="muted"></span></summary>
       <div id="challenge-board" class="challenge-groups"></div>
+      </details>
       <div class="section-head"><h2>알림</h2></div>
       <div id="push-panel" class="panel"></div>
       <div class="section-head"><h2>보기 설정</h2></div>
@@ -332,7 +347,10 @@
 
 <dialog id="poem-dialog" class="sheet" aria-label="시 전문">
   <div class="sheet-body" id="poem-dialog-body"></div>
-  <form method="dialog" class="sheet-foot"><button class="btn btn-quiet">닫기</button></form>
+  <form method="dialog" class="sheet-foot">
+    <button class="btn" type="button" id="poem-transcribe">옮겨 적기</button>
+    <button class="btn btn-quiet">닫기</button>
+  </form>
 </dialog>
 
 <!-- ══════════════ 레슨 — 마디 하나를 걷는 전체 화면 ══════════════
@@ -354,6 +372,58 @@
   <footer class="lesson-foot">
     <p id="lesson-feedback" class="lesson-feedback" role="status" hidden></p>
     <button id="lesson-next" class="btn btn-primary btn-block btn-lg" type="button">확인</button>
+  </footer>
+</section>
+
+<!-- ══════════════ 원고지 필사 ══════════════
+     글자를 받는 곳은 보이지 않는 textarea 하나입니다. 격자는 그 값을 보고
+     다시 그리는 그림입니다. 칸마다 input 을 두면 한글 조합이 끊겨
+     "한" 이 "ㅎ ㅏ ㄴ" 세 칸으로 흩어집니다. -->
+<section id="transcribe" class="lesson" hidden aria-label="원고지 필사">
+  <header class="lesson-bar">
+    <button class="icon-btn" id="tr-close" type="button" aria-label="필사 닫기">
+      <svg class="icon" aria-hidden="true"><use href="#i-x" /></svg>
+    </button>
+    <h2 id="tr-title" class="lesson-bar-mid tr-title"></h2>
+  </header>
+
+  <div class="lesson-body">
+    <div id="tr-work">
+      <details class="step-peek" open>
+        <summary>옮겨 적을 시</summary>
+        <div class="manuscript face-read"><div id="tr-source" class="poem-body"></div></div>
+      </details>
+
+      <!-- 입력창이 격자 위에 투명하게 겹쳐 있습니다. 격자를 누르는 손가락은
+           사실 입력창을 누르는 것이라 모바일 키보드가 확실히 올라옵니다.
+           (스크립트로 focus() 를 부르면 iOS 는 키보드를 띄우지 않을 때가 있습니다.) -->
+      <div class="tr-pad">
+        <div id="tr-grid" class="tr-grid" aria-hidden="true"></div>
+        <label class="sr-only" for="tr-input">원고지에 옮겨 적기</label>
+        <textarea id="tr-input" class="tr-input" maxlength="2000"
+          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+          aria-describedby="tr-help"></textarea>
+      </div>
+      <p id="tr-help" class="step-note">
+        <span id="tr-count" data-min="10">0</span>자 · 줄을 바꾸면 남은 칸을 비우고 다음 줄로 갑니다.
+      </p>
+    </div>
+
+    <div id="tr-done" class="lesson-done" hidden>
+      <svg viewBox="0 0 64 64" class="mascot" aria-hidden="true"><use href="#m-happy" /></svg>
+      <p id="tr-done-text"></p>
+      <div class="row">
+        <button id="tr-done-export" class="btn" type="button">그림으로 내보내기</button>
+        <button id="tr-done-close" class="btn btn-primary" type="button">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="lesson-foot">
+    <div class="row">
+      <button id="tr-export" class="btn" type="button">그림으로</button>
+      <button id="tr-save" class="btn btn-primary" type="button" disabled>저장</button>
+    </div>
   </footer>
 </section>
 

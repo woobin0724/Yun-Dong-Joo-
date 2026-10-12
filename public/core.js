@@ -1,3 +1,7 @@
+import { eulReul, eunNeun } from '/lib/korean.js';
+
+export { eulReul, eunNeun };
+
 /* 별 헤는 밤 — 화면들이 함께 쓰는 것들.
    빌드 도구가 없으므로 표준 ES 모듈로 나눕니다. app.js 하나가 계속
    자라던 것을 여기서부터 쪼갭니다. */
@@ -85,3 +89,6 @@ export function poemHtml(poem) {
     <p class="poem-byline">윤동주 · ${esc(formatWritten(poem.written))}</p>
     <div class="poem-body${poem.form === 'prose' ? ' is-prose' : ''}">${stanzas}</div>`;
 }
+
+/** 「제목」 뒤에 맞는 조사를 붙입니다. 「서시」를 · 「길」을 */
+export const titled = (title, particle = eulReul) => `「${esc(title)}」${particle(title)}`;

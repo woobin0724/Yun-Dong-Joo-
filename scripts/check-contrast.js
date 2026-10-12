@@ -240,7 +240,7 @@ for (const theme of THEMES) {
     checked++;
 
     const kind = await page.evaluate(() => {
-      if (document.querySelector('.lesson-done')) return 'done';
+      if (document.querySelector('#lesson-body .lesson-done')) return 'done';
       if (document.querySelector('#slow-stanza')) return 'slow';
       if (document.querySelector('#order-list .order-moves')) return 'order';
       if (document.querySelector('#response-text')) return 'response';
@@ -276,6 +276,30 @@ for (const theme of THEMES) {
   await page.waitForTimeout(500);
 }
 
+for (const theme of THEMES) {
+  await page.evaluate((t) => (document.documentElement.dataset.theme = t), theme);
+
+  // ── 원고지 필사 ──
+  // 덮는 화면이라 탭 순회에 잡히지 않는다. 시집에서 열어 몇 줄 적어 본다.
+  await page.evaluate(() => {
+    location.hash = '#library';
+    dispatchEvent(new HashChangeEvent('hashchange'));
+  });
+  await page.waitForSelector('.poem-row');
+  await page.locator('.poem-row').first().click();
+  await page.waitForSelector('#poem-dialog[open]');
+  await page.click('#poem-transcribe');
+  await page.waitForSelector('#transcribe:not([hidden])');
+  await page.fill('#tr-input', '죽는 날까지 하늘을 우러러\n한 점 부끄럼이 없기를,');
+  await page.dispatchEvent('#tr-input', 'input');
+  await page.waitForTimeout(300);
+  
+  add(`필사·${theme}`, await measure());
+  checked++;
+  await page.evaluate(() => document.querySelector('#tr-close')?.click());
+  await page.waitForTimeout(300);
+}
+
 // 채점된 선택지(정답·오답 색)도 재야 한다.
 await page.evaluate(() => (document.documentElement.dataset.theme = 'light'));
 await page.evaluate(() => {
@@ -299,6 +323,13 @@ await browser.close();
 
 const rows = [...findings.values()].sort((a, b) => a.got - b.got);
 console.log(`\n화면 ${checked}번을 돌며 실제 합성된 색으로 쟀습니다.\n`);
+// 검사한 화면 수에 바닥을 둔다. 레슨 순회가 첫 걸음에서 끊겨 83화면이 18화면으로
+// 줄었는데도 '위반 0' 이 떴던 적이 있다. 적게 보고 통과하는 것은 통과가 아니다.
+const MIN_SCREENS = 60;
+if (checked < MIN_SCREENS) {
+  console.log(`검사한 화면이 ${checked}개뿐입니다(최소 ${MIN_SCREENS}). 순회가 중간에 끊겼습니다.\n`);
+  process.exit(3);
+}
 if (unknownColors.size) {
   // 읽지 못한 색이 있으면 통과를 믿을 수 없다. 조용히 넘어가지 않는다.
   console.log('읽지 못한 색 표기가 있습니다. 검사기를 고쳐야 합니다:');

@@ -7,6 +7,7 @@ import {
   poemBodyHtml, poemHtml, formatWritten,
 } from './core.js';
 import { mountJourney, loadJourney } from './journey.js';
+import { mountTranscribe, openTranscribe, layout } from './transcribe.js';
 
 const challengeToast = (c) =>
   toast(`${c.title} — ${c.description}`, { tone: 'star', iconName: 'star', ms: 5000 });
@@ -213,7 +214,8 @@ async function enterApp(user) {
   state.user = user;
   $('#gate').hidden = true;
   $('#app').hidden = false;
-  mountJourney({ onPoints: refreshPills });
+  mountJourney({ onPoints: refreshPills, onTranscribe: openTranscribe });
+  mountTranscribe({ onSave: () => { refreshPills(); if (document.body.dataset.view === 'me') loadMe(); } });
   await Promise.all([loadToday(), loadJourney(), loadRooms()]);
   switchView(location.hash.slice(1) || 'path');
 }
@@ -456,6 +458,7 @@ async function loadLibrary() {
 
 async function openPoem(poemId) {
   const { poem } = await api(`/poems/${poemId}`);
+  state.openPoem = poem;
   $('#poem-dialog-body').innerHTML =
     `<div class="manuscript is-sheet">${poemHtml(poem)}</div>` +
     `<aside class="reading-note is-inset">${readingNoteHtml(poem)}</aside>`;
@@ -473,6 +476,12 @@ async function markPoemRead(poemId) {
     return [];
   }
 }
+
+$('#poem-transcribe').addEventListener('click', () => {
+  if (!state.openPoem) return;
+  $('#poem-dialog').close();
+  openTranscribe(state.openPoem);
+});
 
 // ───────── 방 ─────────
 async function loadRooms() {
@@ -693,11 +702,17 @@ async function loadRanking() {
 
 // ───────── 나 ─────────
 async function loadMe() {
-  const [me, board, push] = await Promise.all([
+  const [me, board, push, journey, trs, lines] = await Promise.all([
     api('/me'),
     api('/me/challenges'),
     api('/me/push'),
+    api('/journey'),
+    api('/transcriptions'),
+    api('/journey/responses'),
   ]);
+  renderWalked(journey);
+  renderGallery(trs.transcriptions);
+  renderMyLines(lines.responses);
 
   const s = me.stats;
   // 표식은 여기에 두지 않습니다. 첫 화면 대기와 하루 완료에서는 표식이
@@ -743,6 +758,61 @@ async function loadMe() {
   $('#textsize-select').value = size;
 }
 
+/** 걸어온 길 — 장마다 몇 마디를 걸었는지. 아직 걷지 않은 장도 길 위에 그대로 둡니다. */
+function renderWalked(journey) {
+  $('#walked-count').textContent = `${num(journey.doneCount)} / ${num(journey.total)} 마디`;
+  $('#walked').innerHTML = journey.chapters
+    .map((c) => {
+      const state = c.empty ? 'empty' : c.doneCount === c.total ? 'done' : c.doneCount ? 'walking' : 'ahead';
+      return `<div class="walked-step" data-state="${state}">
+        <span class="walked-dot" aria-hidden="true"></span>
+        <span class="walked-place">${esc(c.place)}</span>
+        <span class="walked-n">${c.empty ? '시 없음' : `${c.doneCount} / ${c.total}`}</span>
+      </div>`;
+    })
+    .join('');
+}
+
+/** 필사 갤러리 — 원고지 한 장을 작게. 앞 서른 칸만 보입니다. */
+function renderGallery(items) {
+  const poems = new Set(items.map((t) => t.poemId)).size;
+  $('#gallery-count').textContent = items.length ? `${num(poems)}편 · ${num(items.length)}장` : '';
+  if (!items.length) {
+    $('#gallery').innerHTML = `<p class="note">아직 옮겨 적은 시가 없습니다. 시집에서 시를 펼치고 '옮겨 적기'를 누르면 여기에 원고지가 한 장씩 쌓입니다.</p>`;
+    return;
+  }
+  $('#gallery').innerHTML = items
+    .map((t) => {
+      const rows = layout(t.text, 6).slice(0, 5);
+      while (rows.length < 5) rows.push([]);
+      const grid = rows
+        .map((r) => {
+          const cells = [];
+          for (let i = 0; i < 6; i++) cells.push(`<span>${r[i] ? esc(r[i]) : ''}</span>`);
+          return cells.join('');
+        })
+        .join('');
+      const day = new Date(t.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+      return `<figure class="sheet-card">
+        <div class="sheet-mini" aria-hidden="true">${grid}</div>
+        <figcaption><b>「${esc(t.title)}」</b><span>${esc(day)} · ${num(t.chars)}자</span></figcaption>
+      </figure>`;
+    })
+    .join('');
+}
+
+/** 레슨 끝에 남긴 한 줄 감상들. 채팅으로 흘러가지 않고 여기 남습니다. */
+function renderMyLines(items) {
+  if (!items.length) {
+    $('#my-lines').innerHTML = `<p class="note">길을 걸으면 마디마다 한 줄씩 남습니다.</p>`;
+    return;
+  }
+  $('#my-lines').innerHTML = items
+    .slice(0, 12)
+    .map((r) => `<blockquote class="my-line"><p>${esc(r.text)}</p><cite>「${esc(r.title)}」</cite></blockquote>`)
+    .join('');
+}
+
 function challengeHtml(c) {
   const meter =
     !c.earned && c.progress?.target
@@ -760,9 +830,12 @@ function challengeHtml(c) {
 // ───────── 웹푸시 ─────────
 function renderPushPanel(push) {
   if (!push.configured) {
+    // 학생에게 npm 명령과 .env 를 말하던 자리입니다. 그 말을 들어야 할 사람은
+    // 서버를 띄운 사람이므로, 화면에는 지금 쓸 수 없다는 것만 적고 고치는 법은
+    // 개발자 도구 콘솔에 남깁니다.
     $('#push-panel').innerHTML = `<p class="note">
-      이 서버에는 아직 웹푸시 키(VAPID)가 설정되지 않아 알림을 보낼 수 없습니다.
-      <code>npm run keys</code> 로 키를 만들어 <code>.env</code> 에 넣고 서버를 다시 시작하세요.</p>`;
+      지금은 알림을 켤 수 없습니다. 이 앱을 운영하는 쪽에서 알림 설정을 마치면 여기서 켤 수 있습니다.</p>`;
+    console.info('[별 헤는 밤] 웹푸시 키(VAPID)가 없습니다. npm run keys 로 만들어 .env 에 넣고 서버를 다시 시작하세요.');
     return;
   }
 

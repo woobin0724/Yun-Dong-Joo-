@@ -265,6 +265,22 @@ const MIGRATIONS = [
       CREATE INDEX idx_responses_user ON responses(user_id, created_at);
     `,
   },
+  {
+    name: '005-transcriptions',
+    sql: `
+      -- 원고지에 옮겨 적은 것. 손으로 쓴 글이라 사라지면 안 된다.
+      -- 한 편을 여러 번 적을 수 있으므로 (user, poem) 에 유일 제약을 두지 않는다.
+      CREATE TABLE transcriptions (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        poem_id    TEXT NOT NULL,
+        text       TEXT NOT NULL,
+        chars      INTEGER NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX idx_transcriptions_user ON transcriptions(user_id, created_at DESC);
+    `,
+  },
 ];
 
 function applyMigrations(database) {

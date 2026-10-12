@@ -1,6 +1,6 @@
 /* 서비스 워커 — 오프라인에서도 앱 껍데기가 뜨게 하고, 웹푸시를 받는다. */
 
-const CACHE = 'byeol-v3';
+const CACHE = 'byeol-v5';
 
 // 앱 껍데기. 글꼴 조각은 여기 넣지 않고, 실제로 쓰인 것만 아래에서 캐시한다
 // (서브셋이 190개라 전부 미리 받으면 첫 방문이 느려진다).
@@ -11,6 +11,9 @@ const SHELL = [
   '/app.js',
   '/core.js',
   '/journey.js',
+  '/transcribe.js',
+  '/manuscript.js',
+  '/lib/korean.js',
   '/theme-init.js',
   '/fonts/fonts.css',
   '/manifest.webmanifest',

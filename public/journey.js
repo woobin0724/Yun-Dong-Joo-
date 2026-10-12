@@ -1,4 +1,4 @@
-import { $, $$, esc, icon, num, api, toast, poemHtml } from './core.js';
+import { $, $$, esc, icon, num, api, toast, poemHtml, titled } from './core.js';
 
 /**
  * 「동주의 길」 — 지도와 레슨.
@@ -18,6 +18,7 @@ const state = {
 };
 
 let onPointsChanged = () => {};
+let onTranscribe = () => {};
 
 // ───────────────────────── 지도 ─────────────────────────
 
@@ -482,7 +483,7 @@ async function finishLesson() {
   $('#lesson-body').innerHTML = `
     <div class="lesson-done">
       <svg viewBox="0 0 64 64" class="mascot" aria-hidden="true"><use href="#m-happy" /></svg>
-      <h3>「${esc(L.poem.title)}」을 걸었습니다.</h3>
+      <h3>${titled(L.poem.title)} 걸었습니다.</h3>
       <p class="lesson-score">${num(res.score)}점</p>
       <p class="step-note">걸음 ${num(res.stepScore)}점 + 완주 ${num(res.bonus)}점</p>
       <p class="step-note">${
@@ -490,7 +491,13 @@ async function finishLesson() {
           ? '길의 끝까지 왔습니다.'
           : `${num(res.doneCount)} / ${num(res.total)} 마디`
       }</p>
+      <button class="btn" type="button" id="lesson-transcribe">이 시를 원고지에 옮겨 적기</button>
     </div>`;
+  $('#lesson-transcribe').addEventListener('click', () => {
+    const poem = L.poem;
+    closeLesson();
+    onTranscribe(poem);
+  });
   $('#lesson-feedback').hidden = true;
   const next = $('#lesson-next');
   next.textContent = res.finished ? '지도로' : '다음 마디로';
@@ -505,8 +512,9 @@ async function finishLesson() {
 
 // ───────────────────────── 붙이기 ─────────────────────────
 
-export function mountJourney({ onPoints } = {}) {
+export function mountJourney({ onPoints, onTranscribe: tr } = {}) {
   if (onPoints) onPointsChanged = onPoints;
+  if (tr) onTranscribe = tr;
 
   $('#path-cta').addEventListener('click', (e) => openLesson(e.currentTarget.dataset.node));
   $('#lesson-close').addEventListener('click', closeLesson);

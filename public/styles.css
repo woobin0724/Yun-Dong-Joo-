@@ -1458,3 +1458,156 @@ details.chapter > .chapter-head:hover .chapter-ord { border-color: var(--ink-mut
 .chapter.is-empty .chapter-ord { border-style: dashed; }
 .chapter.is-empty { display: grid; gap: var(--sp-2); border-bottom: 1px solid var(--line); padding-bottom: var(--sp-4); }
 details.chapter > .node-list { margin-top: var(--sp-3); }
+
+/* ═══════════════ 원고지 필사 ═══════════════ */
+
+.tr-title { font-family: var(--font-poem); font-size: var(--text-base); letter-spacing: 0.03em; }
+
+/* 칸은 정사각형입니다. 가로 열 칸이 들어가도록 칸 크기를 폭에서 끌어냅니다. */
+.tr-grid {
+  --cols: 10;
+  --gap: 3px;
+  display: grid;
+  gap: var(--gap);
+  /* justify-content: start 를 두었더니 격자가 글자 폭만큼만 차지해
+     칸이 18px 로 쪼그라들었습니다. 폭을 다 쓰게 둡니다. */
+  width: 100%;
+  cursor: text;
+}
+.tr-row { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: var(--gap); }
+.tr-cell {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  background: var(--manuscript);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  font-family: var(--font-poem);
+  font-size: clamp(0.9rem, 3.4vw, 1.25rem);
+  line-height: 1;
+  color: var(--ink);
+}
+/* 지금 글자가 들어갈 칸. */
+.tr-cell.is-caret { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+/* 아직 조합 중인 글자 — 아래 밑줄로 '정해지지 않음' 을 보입니다.
+   색만 쓰면 색을 못 보는 사람에게 전달되지 않습니다. */
+.tr-cell.is-composing {
+  border-bottom: 2px solid var(--accent);
+  border-radius: 2px 2px 0 0;
+}
+
+/* 글자를 실제로 받는 곳. 격자 위에 투명하게 겹칩니다.
+   display:none 이나 visibility:hidden 이면 초점이 가지 않아 키보드가 안 뜹니다.
+   글자는 격자가 보여 주므로 여기서는 글자도 커서도 보이지 않게 합니다.
+   font-size 16px 미만이면 iOS 가 초점을 줄 때 화면을 확대합니다. */
+.tr-pad { position: relative; }
+.tr-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  font-size: 16px;
+  resize: none;
+  opacity: 0;
+  cursor: text;
+}
+/* 초점이 격자에 와 있다는 것을 보여야 키보드 사용자가 길을 잃지 않습니다. */
+.tr-pad:focus-within .tr-grid { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 2px; }
+
+#transcribe .lesson-body { gap: var(--sp-3); }
+#transcribe .row { gap: var(--sp-2); }
+#transcribe .lesson-foot .row > .btn { flex: 1; }
+
+/* ═══════════════ 나 — 걸어온 길 · 필사 갤러리 ═══════════════ */
+
+/* 걸어온 길. 장이 세로로 이어진 한 줄의 길이고, 점이 그 위의 발자국입니다. */
+.walked { display: grid; gap: 0; }
+.walked-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: var(--tap);
+}
+.walked-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: calc(50% + 7px);
+  height: calc(100% - 14px);
+  width: 2px;
+  background: var(--line);
+}
+.walked-dot {
+  width: 12px; height: 12px;
+  margin-left: 4px;
+  border-radius: var(--r-pill);
+  border: 2px solid var(--line-strong);
+  background: var(--bg);
+}
+.walked-step[data-state='done'] .walked-dot { background: var(--accent); border-color: var(--accent); }
+.walked-step[data-state='walking'] .walked-dot { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--bg), inset 0 0 0 6px var(--accent); }
+.walked-step[data-state='empty'] .walked-dot { border-style: dashed; }
+.walked-place { font-family: var(--font-poem); }
+.walked-step[data-state='empty'] .walked-place,
+.walked-step[data-state='ahead'] .walked-place { color: var(--ink-soft); }
+.walked-n { font-size: var(--text-sm); color: var(--ink-mute); font-variant-numeric: tabular-nums; }
+
+/* 필사 갤러리 */
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: var(--sp-3); }
+.sheet-card { margin: 0; display: grid; gap: var(--sp-2); }
+.sheet-mini {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2px;
+  padding: var(--sp-2);
+  background: var(--manuscript);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+}
+.sheet-mini > span {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border: 1px solid var(--rule);
+  font-family: var(--font-poem);
+  font-size: var(--text-xs);
+  line-height: 1;
+  color: var(--ink);
+}
+.sheet-card figcaption { display: grid; gap: 1px; font-size: var(--text-sm); }
+.sheet-card figcaption b { font-family: var(--font-poem); font-weight: 400; }
+.sheet-card figcaption span { font-size: var(--text-xs); color: var(--ink-mute); }
+
+/* 남긴 한 줄 */
+.my-lines { display: grid; gap: var(--sp-3); }
+.my-line {
+  margin: 0;
+  padding: var(--sp-1) 0 var(--sp-1) var(--sp-4);
+  border-left: 2px solid var(--accent-line);
+}
+.my-line p { margin: 0 0 var(--sp-1); font-family: var(--font-poem); line-height: 1.85; white-space: pre-wrap; }
+.my-line cite { font-size: var(--text-xs); color: var(--ink-mute); font-style: normal; }
+
+/* 도전과제는 접힙니다. 첫날 0/23 이 화면을 차지하던 것을 걷어냈습니다. */
+.me-fold > summary { list-style: none; cursor: pointer; min-height: var(--tap); }
+.me-fold > summary::-webkit-details-marker { display: none; }
+.me-fold > summary h2::after { content: ' 펼치기'; font-family: var(--font-ui); font-size: var(--text-xs); color: var(--ink-mute); font-weight: 400; }
+.me-fold[open] > summary h2::after { content: ' 접기'; }
+
+/* 옮겨 적을 시는 곁눈으로 보는 것이지 주인공이 아닙니다. 높이를 묶어 두어
+   쓰는 자리(격자와 입력창)가 화면 밖으로 밀려나지 않게 합니다. */
+#tr-work .step-peek .manuscript {
+  max-height: 30dvh;
+  overflow-y: auto;
+  padding-top: var(--sp-4);
+  padding-bottom: var(--sp-4);
+}
+#tr-work .step-peek .poem-body .line { line-height: 1.8; }

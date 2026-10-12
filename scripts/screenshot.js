@@ -173,7 +173,8 @@ await collect('랭킹');
 
 // ── 나 ──
 await page.click('.tab[data-view="me"]');
-await page.waitForSelector('.challenge');
+// 도전과제는 이제 접혀 있어 보이지 않는다. 「나」의 첫 덩어리인 걸어온 길을 기다린다.
+await page.waitForSelector('.walked-step');
 await page.waitForTimeout(500);
 await shot('10-me-paper');
 await collect('나');
@@ -199,7 +200,7 @@ if ((await cta.count()) && (await cta.isVisible())) {
   const nextBtn = page.locator('#lesson-next');
   for (let guard = 0; guard < 20; guard++) {
     const kind = await page.evaluate(() => {
-      if (document.querySelector('.lesson-done')) return 'done';
+      if (document.querySelector('#lesson-body .lesson-done')) return 'done';
       if (document.querySelector('#slow-stanza')) return 'slow';
       if (document.querySelector('#order-list .order-moves')) return 'order';
       if (document.querySelector('#response-text')) return 'response';
@@ -237,6 +238,26 @@ if ((await cta.count()) && (await cta.isVisible())) {
   await page.evaluate(() => document.querySelector('#lesson-close')?.click());
   await page.waitForTimeout(600);
 }
+
+
+// ── 원고지 필사 ──
+// 덮는 화면이라 탭 순회에 잡히지 않는다. 시집에서 열어 몇 줄 적어 본다.
+await page.evaluate(() => {
+  location.hash = '#library';
+  dispatchEvent(new HashChangeEvent('hashchange'));
+});
+await page.waitForSelector('.poem-row');
+await page.locator('.poem-row').first().click();
+await page.waitForSelector('#poem-dialog[open]');
+await page.click('#poem-transcribe');
+await page.waitForSelector('#transcribe:not([hidden])');
+await page.fill('#tr-input', '죽는 날까지 하늘을 우러러\n한 점 부끄럼이 없기를,');
+await page.dispatchEvent('#tr-input', 'input');
+await page.waitForTimeout(300);
+await shot('19-transcribe', false);
+await collect('원고지 필사');
+await page.evaluate(() => document.querySelector('#tr-close')?.click());
+await page.waitForTimeout(400);
 
 // ── 데스크톱 폭에서 한 바퀴 더 ──
 // 모바일만 고치고 넓은 화면을 방치하는 일이 흔하다.
