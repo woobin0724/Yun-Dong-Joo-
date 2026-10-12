@@ -17,6 +17,7 @@
  */
 import { POEMS } from '../src/content/poems.js';
 import { BACKGROUND_QUIZ } from '../src/content/quiz-bank.js';
+import { CHAPTERS } from '../src/content/journey.js';
 
 const bad = [];
 const unverified = [];
@@ -54,6 +55,19 @@ if (unverified.length) console.log(`   ${unverified.join(' · ')}\n`);
 
 console.log(`■ 출처가 없는 작품: ${sourceless.length} / ${POEMS.length}편`);
 console.log(`■ 출처가 없는 배경 문항: ${quizNoSource.length} / ${BACKGROUND_QUIZ.length}문항\n`);
+
+const chapterFacts = CHAPTERS.filter((c) => c.verified !== true);
+console.log(`■ 출처 대조 안 된 장의 사실: ${chapterFacts.length} / ${CHAPTERS.length}장`);
+if (chapterFacts.length) {
+  // 장 이름에 이미 가운뎃점이 든 것이 있어(도쿄 · 교토) 쉼표로 가릅니다.
+  console.log(`   ${chapterFacts.map((c) => c.place).join(', ')}`);
+  console.log(
+    '   이 장들의 years 와 story 는 API 응답에서 빠집니다(services/journey.js).\n' +
+      '   확인하려면 source_url 을 열어 본문에 그 진술이 실제로 있는지 보고,\n' +
+      '   맞으면 verified 를 true 로, last_checked 를 그날 날짜로 바꾸세요.\n' +
+      '   비슷한 말이 있다고 통과시키면 안 됩니다.\n',
+  );
+}
 
 console.log('대조 절차는 README 의 「시 본문 정정」 항목을 보세요.');
 console.log('정음사 『하늘과 바람과 별과 詩』(1955 증보판) / 왕신영 외 『사진판 윤동주 자필 시고전집』\n');

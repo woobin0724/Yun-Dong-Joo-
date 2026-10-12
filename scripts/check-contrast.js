@@ -20,7 +20,7 @@
 import { chromium } from 'playwright';
 
 const BASE = process.argv[2] || 'http://127.0.0.1:3000';
-const VIEWS = ['today', 'library', 'room', 'ranking', 'me'];
+const VIEWS = ['path', 'today', 'library', 'room', 'ranking', 'me'];
 const THEMES = ['light', 'dark'];
 // 인주 레드는 고르지 않은 안이라 배포 CSS 에 없습니다. 재 봐야 블루와
 // 같은 값이 나오므로 빼둡니다. 포인트 색을 다시 고르면 여기도 늘립니다.
@@ -40,10 +40,34 @@ await page.waitForSelector('#gate:not([hidden])');
 /** 로그인 화면도 검사 대상이다. 먼저 여기서 한 번 재고 들어간다. */
 const measure = () =>
   page.evaluate(() => {
-    const parse = (s) => {
-      const m = s.match(/[\d.]+/g);
-      if (!m) return [0, 0, 0, 0];
-      return [+m[0], +m[1], +m[2], m[3] === undefined ? 1 : +m[3]];
+    // 브라우저가 돌려주는 색 문자열은 한 가지가 아니다.
+    //   rgb(35, 33, 30) / rgba(…, 0.5)      — 0~255 정수
+    //   color(srgb 0.877 0.913 0.884)       — 0~1 실수. color-mix() 가 이렇게 나온다.
+    // 둘을 구별하지 않고 숫자만 긁으면 0.877 을 255 눈금의 0.877 로 읽어
+    // 연한 초록이 거의 검정이 된다. 실제로 그래서 멀쩡한 화면 세 곳을
+    // 1.3:1 이라고 잘못 걸렀다. 모르는 꼴은 조용히 넘기지 말고 알린다.
+    const unknown = [];
+    const parse = (str) => {
+      const text = String(str).trim();
+      if (text === 'transparent') return [0, 0, 0, 0];
+
+      const nums = text.match(/-?[\d.]+(?:e-?\d+)?%?/gi) ?? [];
+      const val = (raw, scale) => {
+        if (raw === undefined) return null;
+        if (raw.endsWith('%')) return (parseFloat(raw) / 100) * scale;
+        return parseFloat(raw);
+      };
+
+      if (/^rgba?\(/i.test(text)) {
+        const [r, g, b, a] = nums;
+        return [val(r, 255), val(g, 255), val(b, 255), a === undefined ? 1 : val(a, 1)];
+      }
+      if (/^color\(\s*srgb\b/i.test(text)) {
+        const [r, g, b, a] = nums;
+        return [val(r, 1) * 255, val(g, 1) * 255, val(b, 1) * 255, a === undefined ? 1 : val(a, 1)];
+      }
+      unknown.push(text);
+      return null;
     };
     const over = (fg, bg) => {
       const a = fg[3];
@@ -65,6 +89,7 @@ const measure = () =>
     const behind = (el) => {
       if (!el) return [255, 255, 255];
       const c = parse(getComputedStyle(el).backgroundColor);
+      if (c === null) return behind(el.parentElement); // 못 읽은 색은 없는 셈 친다
       if (c[3] >= 0.999) return c.slice(0, 3);
       if (c[3] > 0) return over(c, behind(el.parentElement));
       return behind(el.parentElement);
@@ -111,6 +136,7 @@ const measure = () =>
         ? behind(outermostFaded.parentElement)
         : behind(el);
       const fg = parse(cs.color);
+      if (fg === null) continue;
       const text = over([fg[0], fg[1], fg[2], fg[3] * op], bg);
 
       const size = parseFloat(cs.fontSize);
@@ -139,12 +165,14 @@ const measure = () =>
         });
       }
     }
-    return out;
+    return { findings: out, unknown: [...new Set(unknown)] };
   });
 
 const findings = new Map();
-const add = (where, rows) => {
-  for (const r of rows) findings.set(`${where}|${r.sel}|${r.got}`, { where, ...r });
+const unknownColors = new Set();
+const add = (where, result) => {
+  for (const r of result.findings) findings.set(`${where}|${r.sel}|${r.got}`, { where, ...r });
+  for (const u of result.unknown) unknownColors.add(u);
 };
 
 let checked = 0;
@@ -179,18 +207,82 @@ for (const theme of THEMES) {
       { theme, accent },
     );
     for (const view of VIEWS) {
-      await page.click(`.tab[data-view="${view}"]`);
-      await page.waitForTimeout(260);
+      // 탭이 없는 화면(오늘의 시)도 있으므로 해시로 옮깁니다.
+      await page.evaluate((v) => {
+        location.hash = `#${v}`;
+        dispatchEvent(new HashChangeEvent('hashchange'));
+      }, view);
+      await page.waitForTimeout(300);
       add(`${view}·${theme}·${accent}`, await measure());
       checked++;
     }
   }
 }
 
+// 레슨은 탭이 아니라 덮는 화면이라 위 순회에 잡히지 않는다.
+// 이번에 새로 생긴 가장 큰 화면이므로 걸음마다 따로 재야 한다.
+for (const theme of THEMES) {
+  await page.evaluate((t) => (document.documentElement.dataset.theme = t), theme);
+  await page.evaluate(() => {
+    location.hash = '#path';
+    dispatchEvent(new HashChangeEvent('hashchange'));
+  });
+  await page.waitForTimeout(400);
+  const cta = page.locator('#path-cta');
+  if (!(await cta.count()) || (await cta.isHidden())) continue;
+  await cta.click();
+  await page.waitForSelector('#lesson:not([hidden])');
+  await page.waitForTimeout(400);
+
+  const next = page.locator('#lesson-next');
+  for (let guard = 0; guard < 24; guard++) {
+    add(`레슨·${theme}`, await measure());
+    checked++;
+
+    const kind = await page.evaluate(() => {
+      if (document.querySelector('.lesson-done')) return 'done';
+      if (document.querySelector('#slow-stanza')) return 'slow';
+      if (document.querySelector('#order-list .order-moves')) return 'order';
+      if (document.querySelector('#response-text')) return 'response';
+      if (document.querySelector('#lesson-body .choice')) return 'choice';
+      return '?';
+    });
+    if (kind === 'done' || kind === '?') break;
+
+    if (kind === 'slow') {
+      await page.waitForFunction(() => !document.querySelector('#lesson-next').disabled, {
+        timeout: 25000,
+      });
+    } else if (kind === 'choice') {
+      // 일부러 틀린 답도 한 번 고른다. 정답·오답 색이 바로 이 화면에 뜬다.
+      await page.locator('#lesson-body .choice').nth(guard % 2 ? 0 : 3).click();
+    } else if (kind === 'order') {
+      await page.locator('#order-list [data-move="down"]').first().click();
+    } else {
+      await page.fill('#response-text', '마지막 두 행에서 오래 멈췄습니다. 거기서 말이 끊기기 때문입니다.');
+      await page.waitForTimeout(150);
+    }
+    await next.click();
+    await page.waitForTimeout(650);
+    // 채점 결과가 떠 있는 상태도 재고 넘어간다.
+    add(`레슨 결과·${theme}`, await measure());
+    checked++;
+    if (await page.evaluate(() => document.querySelector('#lesson-next')?.dataset.mode === 'go')) {
+      await next.click();
+      await page.waitForTimeout(550);
+    }
+  }
+  await page.evaluate(() => document.querySelector('#lesson-close')?.click());
+  await page.waitForTimeout(500);
+}
+
 // 채점된 선택지(정답·오답 색)도 재야 한다.
 await page.evaluate(() => (document.documentElement.dataset.theme = 'light'));
-await page.click('.tab[data-view="today"]');
-await page.waitForTimeout(300);
+await page.evaluate(() => {
+  location.hash = '#path';
+  dispatchEvent(new HashChangeEvent('hashchange'));
+});
+await page.waitForTimeout(400);
 const choice = page.locator('.mission .choice').first();
 if (await choice.count()) {
   await choice.click();
@@ -207,6 +299,13 @@ await browser.close();
 
 const rows = [...findings.values()].sort((a, b) => a.got - b.got);
 console.log(`\n화면 ${checked}번을 돌며 실제 합성된 색으로 쟀습니다.\n`);
+if (unknownColors.size) {
+  // 읽지 못한 색이 있으면 통과를 믿을 수 없다. 조용히 넘어가지 않는다.
+  console.log('읽지 못한 색 표기가 있습니다. 검사기를 고쳐야 합니다:');
+  for (const u of unknownColors) console.log('  ' + u);
+  console.log('');
+  process.exit(2);
+}
 if (!rows.length) {
   console.log('기준 미만인 글자가 없습니다. (본문 4.5:1 · 큰 글자 3:1)\n');
   process.exit(0);

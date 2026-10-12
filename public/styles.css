@@ -1176,3 +1176,285 @@ body[data-view='room'] .toasts {
 }
 
 
+
+/* ═══════════════ 길 — 지도 ═══════════════ */
+
+.path-top { margin-bottom: var(--sp-5); }
+.path-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-2);
+}
+.path-h { font-family: var(--font-poem); font-size: var(--text-xl); letter-spacing: 0.04em; }
+.path-count { font-size: var(--text-sm); color: var(--ink-mute); font-variant-numeric: tabular-nums; }
+
+/* 막대는 폭이 아니라 scaleX 로 자랍니다.
+   width 를 애니메이션하면 매 프레임 레이아웃을 다시 계산합니다.
+   transform 은 합성 단계에서만 움직여 같은 그림을 훨씬 싸게 그립니다. */
+.meter { height: 3px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.meter > i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--accent);
+  transform: scaleX(var(--fill, 0));
+  transform-origin: left center;
+  transition: transform var(--dur) var(--ease);
+}
+.meter-lg { height: 8px; border-radius: var(--r-pill); background: var(--surface-2); }
+
+/* 이 화면에서 누를 것은 이 버튼 하나입니다. 그래서 크고, 위에 있고,
+   다른 무엇도 같은 무게로 그리지 않습니다. */
+.cta {
+  display: grid;
+  gap: 2px;
+  min-height: 68px;
+  padding: var(--sp-3) var(--sp-5);
+  margin-bottom: var(--sp-6);
+}
+.cta-label { font-size: var(--text-lg); font-weight: 700; }
+.cta-sub { font-family: var(--font-poem); font-size: var(--text-sm); opacity: 0.9; }
+.cta-sub:empty { display: none; }
+
+.path-aside { margin: calc(var(--sp-3) * -1) 0 var(--sp-3); }
+/* 글 속에 섞인 링크가 아니라 혼자 서 있는 누를 거리입니다.
+   21px 짜리 글줄로 두면 손가락으로 겨냥할 수가 없습니다. */
+.link-quiet {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+.notice {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: flex-start;
+  margin: 0 0 var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
+  font-size: var(--text-sm);
+  line-height: 1.7;
+  color: var(--ink-soft);
+}
+.notice .icon { flex: none; margin-top: 0.2em; }
+
+.path-map { display: grid; gap: var(--sp-6); }
+
+.chapter { display: grid; gap: var(--sp-3); }
+.chapter-head { display: flex; align-items: center; gap: var(--sp-3); }
+.chapter-ord {
+  display: inline-grid;
+  place-items: center;
+  width: 28px; height: 28px;
+  flex: none;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-pill);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-mute);
+}
+.chapter-head > div { flex: 1; }
+.chapter-place { font-family: var(--font-poem); font-size: var(--text-lg); letter-spacing: 0.04em; }
+.chapter-hint { margin: 0; font-size: var(--text-xs); color: var(--ink-mute); }
+.chapter-count { font-size: var(--text-sm); color: var(--ink-mute); font-variant-numeric: tabular-nums; }
+
+.chapter-story { margin: 0; font-size: var(--text-sm); color: var(--ink-soft); line-height: 1.8; }
+/* 출처 대조 전인 이야기. 지어낸 글을 넣지 않았다는 사실을 그대로 보입니다. */
+.chapter-story.is-pending { color: var(--ink-mute); font-style: normal; }
+.chapter-source { margin: 0; font-size: var(--text-xs); color: var(--ink-mute); }
+.chapter-empty {
+  margin: 0;
+  padding: var(--sp-4);
+  border-left: 2px solid var(--line);
+  font-size: var(--text-sm);
+  color: var(--ink-mute);
+  line-height: 1.8;
+}
+
+.node-list { display: grid; gap: var(--sp-2); }
+.node {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: var(--tap);
+  padding: var(--sp-2) var(--sp-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-btn);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 var(--lift) 0 var(--line);
+  margin-bottom: var(--lift);
+  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.node:active:not(:disabled) { transform: translateY(var(--lift)); box-shadow: 0 0 0 var(--line); }
+.node-mark { display: inline-grid; place-items: center; flex: none; color: var(--ink-mute); }
+.node-title { font-family: var(--font-poem); font-size: var(--text-base); }
+
+.node[data-state='done'] { border-color: var(--accent-line); background: var(--accent-soft); }
+.node[data-state='done'] .node-mark { color: var(--accent-ink); }
+/* 지금 걸을 마디. 테두리를 굵게 해서 어디로 가야 하는지 한눈에 보입니다. */
+.node[data-state='open'] { border: 1.5px solid var(--accent); box-shadow: 0 var(--lift) 0 var(--accent-line); }
+.node[data-state='open'] .node-mark { color: var(--accent-ink); }
+/* 잠긴 마디는 투명도 대신 색으로 구별합니다. */
+.node[data-state='locked'] {
+  background: transparent;
+  border-style: dashed;
+  color: var(--ink-mute);
+  box-shadow: none;
+  margin-bottom: var(--lift);
+  cursor: not-allowed;
+}
+
+/* ═══════════════ 레슨 ═══════════════ */
+
+.lesson {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background: var(--bg);
+  padding-top: env(safe-area-inset-top);
+}
+body[data-lesson='open'] { overflow: hidden; }
+
+.lesson-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--line);
+}
+.lesson-bar-mid { flex: 1; }
+.lesson-count { font-size: var(--text-sm); color: var(--ink-mute); font-variant-numeric: tabular-nums; }
+
+.lesson-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  width: 100%;
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: var(--sp-5) var(--sp-4);
+  display: grid;
+  gap: var(--sp-4);
+  align-content: start;
+}
+
+.lesson-foot {
+  display: grid;
+  gap: var(--sp-3);
+  width: 100%;
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: var(--sp-3) var(--sp-4) max(var(--sp-4), env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+}
+
+.step-prompt { margin: 0; font-size: var(--text-base); line-height: 1.8; }
+.step-note { margin: 0; font-size: var(--text-sm); color: var(--ink-mute); line-height: 1.7; }
+.step-note[data-ok='true'] { color: var(--ok); }
+
+.step-peek > summary {
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.step-peek .manuscript { margin-top: var(--sp-3); }
+
+/* 행 순서 */
+.order-list { display: grid; gap: var(--sp-2); margin: 0; padding: 0; list-style: none; }
+.order-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 52px;
+  padding: var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-4);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-btn);
+  background: var(--surface);
+}
+.order-text { flex: 1; font-family: var(--font-poem); line-height: 1.6; }
+.order-moves { display: flex; gap: 2px; flex: none; }
+.order-moves .icon-btn:disabled { color: var(--line-strong); cursor: not-allowed; }
+.order-row.is-answer { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 10%, var(--surface)); }
+
+/* 걸음의 결과 */
+.lesson-feedback {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-md);
+  font-size: var(--text-sm);
+  line-height: 1.7;
+}
+.lesson-feedback .icon { flex: none; margin-top: 0.15em; }
+.lesson-feedback.is-ok { background: color-mix(in srgb, var(--ok) 14%, var(--surface)); color: var(--ink); }
+.lesson-feedback.is-ok .icon { color: var(--ok); }
+.lesson-feedback.is-no { background: color-mix(in srgb, var(--alert) 12%, var(--surface)); color: var(--ink); }
+.lesson-feedback.is-no .icon { color: var(--alert); }
+.lesson-feedback.is-neutral { display: block; background: var(--surface); color: var(--ink-soft); }
+
+/* 화자의 마음 — 분포. 막대는 장식이 아니라 숫자를 한 번 더 보여 주는 것이고,
+   숫자가 옆에 늘 함께 있어서 막대를 못 봐도 읽힙니다. */
+.dist-head { margin: 0 0 var(--sp-3); font-size: var(--text-sm); color: var(--ink); }
+.dist { display: grid; gap: var(--sp-2); margin: 0; padding: 0; list-style: none; }
+.dist-row { display: grid; grid-template-columns: 1fr 5rem 2.5rem; align-items: center; gap: var(--sp-2); }
+.dist-label { font-size: var(--text-sm); color: var(--ink); }
+.dist-bar { height: 6px; border-radius: var(--r-pill); background: var(--surface-2); overflow: hidden; }
+.dist-bar > i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--accent);
+  transform: scaleX(var(--fill, 0));
+  transform-origin: left center;
+}
+.dist-pct { font-size: var(--text-sm); color: var(--ink-mute); text-align: right; font-variant-numeric: tabular-nums; }
+
+.lesson-done { display: grid; justify-items: center; gap: var(--sp-3); padding: var(--sp-10) 0; text-align: center; }
+.lesson-done svg.mascot { width: 56px; height: 56px; }
+.lesson-done h3 { font-family: var(--font-poem); font-size: var(--text-xl); }
+.lesson-score { margin: 0; font-size: var(--text-2xl); font-weight: 700; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+
+/* 장은 접힙니다. 지금 걷는 장만 펼쳐져 있습니다. */
+details.chapter { border-bottom: 1px solid var(--line); padding-bottom: var(--sp-4); }
+details.chapter[open] { padding-bottom: var(--sp-5); }
+.chapter-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: var(--tap);
+  cursor: pointer;
+  list-style: none;
+}
+.chapter-head::-webkit-details-marker { display: none; }
+.chapter.is-empty .chapter-head { cursor: default; }
+.chapter-headings { flex: 1; display: grid; gap: 1px; }
+.chapter-place { font-family: var(--font-poem); font-size: var(--text-lg); letter-spacing: 0.04em; }
+.chapter-hint { font-size: var(--text-xs); color: var(--ink-mute); }
+/* 펼쳐짐을 삼각형 대신 테두리 강조로 알립니다. 삼각형을 그리면
+   브라우저마다 다른 모양이 나와 어느 디자인에도 속하지 않습니다. */
+details.chapter[open] > .chapter-head .chapter-ord {
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+details.chapter > .chapter-head:hover .chapter-ord { border-color: var(--ink-mute); }
+.chapter.is-empty .chapter-ord { border-style: dashed; }
+.chapter.is-empty { display: grid; gap: var(--sp-2); border-bottom: 1px solid var(--line); padding-bottom: var(--sp-4); }
+details.chapter > .node-list { margin-top: var(--sp-3); }

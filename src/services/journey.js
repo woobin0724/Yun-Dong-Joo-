@@ -295,6 +295,10 @@ export function finishNode(userId, nodeId) {
   const map = mapFor(userId);
   return {
     ok: true,
+    // 화면이 '걸음 n점 + 완주 m점' 으로 쪼개 보여 주므로 둘을 따로 보냅니다.
+    // 보너스를 프런트에 숫자로 박아 두면 서버와 어긋나는 날이 옵니다.
+    stepScore: row.score,
+    bonus: FINISH_BONUS,
     score: row.score + FINISH_BONUS,
     next: map.next,
     doneCount: map.doneCount,

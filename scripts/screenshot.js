@@ -181,12 +181,69 @@ await setTheme('dark');
 await page.waitForTimeout(300);
 await shot('11-me-night');
 
+// ── 레슨 ──
+// 이번에 생긴 가장 큰 화면인데 탭이 없어서 위 순회에 잡히지 않는다.
+await page.evaluate(() => {
+  location.hash = '#path';
+  dispatchEvent(new HashChangeEvent('hashchange'));
+});
+await page.waitForTimeout(500);
+const cta = page.locator('#path-cta');
+if ((await cta.count()) && (await cta.isVisible())) {
+  await cta.click();
+  await page.waitForSelector('#lesson:not([hidden])');
+  await page.waitForTimeout(500);
+  await shot('15-lesson-read', false);
+  await collect('레슨(천천히 읽기)');
+
+  const nextBtn = page.locator('#lesson-next');
+  for (let guard = 0; guard < 20; guard++) {
+    const kind = await page.evaluate(() => {
+      if (document.querySelector('.lesson-done')) return 'done';
+      if (document.querySelector('#slow-stanza')) return 'slow';
+      if (document.querySelector('#order-list .order-moves')) return 'order';
+      if (document.querySelector('#response-text')) return 'response';
+      if (document.querySelector('#lesson-body .choice')) return 'choice';
+      return '?';
+    });
+    if (kind === 'done' || kind === '?') break;
+
+    if (kind === 'slow') {
+      await page.waitForFunction(() => !document.querySelector('#lesson-next').disabled, {
+        timeout: 25000,
+      });
+    } else if (kind === 'choice') {
+      await page.locator('#lesson-body .choice').first().click();
+    } else if (kind === 'order') {
+      await page.locator('#order-list [data-move="down"]').first().click();
+      await shot('16-lesson-order', false);
+      await collect('레슨(행 순서)');
+    } else {
+      await page.fill('#response-text', '마지막 두 행에서 오래 멈췄습니다. 거기서 말이 끊기기 때문입니다.');
+      await page.waitForTimeout(150);
+      await shot('17-lesson-response', false);
+      await collect('레슨(한 줄 감상)');
+    }
+    await nextBtn.click();
+    await page.waitForTimeout(650);
+    await collect(`레슨 결과(${kind})`);
+    if (await page.evaluate(() => document.querySelector('#lesson-next')?.dataset.mode === 'go')) {
+      await nextBtn.click();
+      await page.waitForTimeout(550);
+    }
+  }
+  await shot('18-lesson-done', false);
+  await collect('레슨(마디 완료)');
+  await page.evaluate(() => document.querySelector('#lesson-close')?.click());
+  await page.waitForTimeout(600);
+}
+
 // ── 데스크톱 폭에서 한 바퀴 더 ──
 // 모바일만 고치고 넓은 화면을 방치하는 일이 흔하다.
 await page.setViewportSize({ width: 1280, height: 900 });
 await setTheme('light');
 for (const [view, name] of [
-  ['today', '12-today-wide'],
+  ['path', '12-path-wide'],
   ['room', '13-room-wide'],
   ['me', '14-me-wide'],
 ]) {
@@ -198,17 +255,24 @@ for (const [view, name] of [
 await page.setViewportSize({ width: 360, height: 780 });
 
 // ── 확인 ──
+// 시 본문은 '오늘의 시' 화면에 있다. 홈이 지도로 바뀌면서 홈에는 시가 없다.
+await page.evaluate(() => {
+  location.hash = '#today';
+  dispatchEvent(new HashChangeEvent('hashchange'));
+});
+await page.waitForTimeout(500);
+
 const fontFamily = await page.evaluate(() => {
   const el = document.querySelector('.poem-title');
   return el ? getComputedStyle(el).fontFamily : '(없음)';
 });
 const fontLoaded = await page.evaluate(() => document.fonts.check('16px "Gowun Batang"'));
 
-// 한 줄에 몇 글자가 들어가는지 (한국어는 35~45자가 읽기 좋다)
-await page.click('.tab[data-view="today"]');
-await page.waitForTimeout(400);
+// 한 줄에 몇 글자가 들어가는지 (한국어는 35~45자가 읽기 좋다).
+// 시행은 시인이 끊은 자리라 이 잣대를 대지 않는다. 산문(읽기 도움말)로 잰다.
 const measure = await page.evaluate(() => {
-  const el = document.querySelector('.poem-body .stanza');
+  // 읽기 도움말은 산문이라 줄당 글자 수가 뜻을 가진다.
+  const el = document.querySelector('.reading-note p') ?? document.querySelector('.poem-body .stanza');
   if (!el) return null;
   const style = getComputedStyle(el);
   const probe = document.createElement('span');
@@ -225,7 +289,7 @@ await browser.close();
 console.log(`\n저장 위치: ${OUT}/`);
 console.log(`시 글꼴: ${fontFamily}`);
 console.log(`Gowun Batang 로드됨: ${fontLoaded ? '예' : '아니요'}`);
-console.log(`시 본문 한 줄: 약 ${measure}자`);
+console.log(`산문 한 줄: 약 ${measure}자 (한국어는 35~45자가 읽기 좋습니다)`);
 
 // 로그인 전 /api/auth/me 가 401 을 주는 건 정상이라 걸러 냅니다.
 const realErrors = consoleErrors.filter((e) => !e.includes('401'));

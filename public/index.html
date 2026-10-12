@@ -53,6 +53,8 @@
   <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.8" y="5.6" width="16.4" height="14.6" rx="2.2"/><path d="M3.8 10.2h16.4M8.4 3.4v4M15.6 3.4v4"/></symbol>
   <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><circle cx="12" cy="12" r="4.6"/><circle cx="12" cy="12" r="1.2"/></symbol>
   <symbol id="i-crown" viewBox="0 0 24 24"><path d="M3.8 17.4L5.4 7.2l4.3 4.1L12 5.4l2.3 5.9 4.3-4.1 1.6 10.2z"/><path d="M4.6 20.4h14.8"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19.2V5.4"/><path d="M5.8 11.6L12 5.2l6.2 6.4"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4.8v13.8"/><path d="M18.2 12.4L12 18.8l-6.2-6.4"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.8 6.8h14.4M9.6 6.8V5.2a1.4 1.4 0 0 1 1.4-1.4h2a1.4 1.4 0 0 1 1.4 1.4v1.6"/><path d="M6.6 6.8l.8 12a1.6 1.6 0 0 0 1.6 1.5h6a1.6 1.6 0 0 0 1.6-1.5l.8-12"/></symbol>
 
   <!-- ── 표식 "한 방울" ──
@@ -196,12 +198,53 @@
   </header>
 
   <main>
-    <section class="view" data-view="today">
-      <article id="today-poem" class="manuscript"></article>
-      <aside id="today-note" class="reading-note"></aside>
-      <div class="section-head"><h2>오늘의 미션</h2><span id="today-left" class="muted"></span></div>
+    <!-- ══════════════ 길 — 홈 ══════════════
+         이 앱을 열면 가장 먼저 보이는 화면입니다. 누를 것은 큰 버튼 하나뿐이고,
+         그 아래에 오늘 할 일과 지도가 차례로 있습니다. 예전에는 이 자리에 긴 시가
+         먼저 놓여서, 360×740 화면에서 첫 미션 카드가 y=1,222px 에 있었습니다. -->
+    <section class="view" data-view="path">
+      <div class="path-top">
+        <div class="path-line">
+          <h2 class="path-h">동주의 길</h2>
+          <span id="path-progress" class="path-count"></span>
+        </div>
+        <div id="path-meter" class="meter meter-lg" role="progressbar"
+             aria-label="걸어온 길" aria-valuemin="0" aria-valuemax="100"><i></i></div>
+      </div>
+
+      <button id="path-cta" class="btn btn-primary btn-block cta" type="button" hidden>
+        <span class="cta-label">이어서 걷기</span>
+        <span class="cta-sub"></span>
+      </button>
+      <div id="path-end" class="day-done" hidden>
+        <svg viewBox="0 0 64 64" class="mascot" aria-hidden="true"><use href="#m-cheer" /></svg>
+        <p>길의 끝까지 걸었습니다.</p>
+      </div>
+
+      <div class="section-head">
+        <h2>오늘 할 일</h2>
+        <span id="today-left" class="muted"></span>
+      </div>
+      <p class="path-aside">
+        <a href="#today" class="link-quiet">오늘의 시 펼쳐 보기</a>
+      </p>
       <div id="mission-list" class="mission-list"></div>
       <div id="today-done" class="day-done" hidden></div>
+
+      <div class="section-head"><h2>지도</h2></div>
+      <p id="chapter-note" class="note"></p>
+      <p id="path-unverified" class="notice" hidden></p>
+      <div id="path-map" class="path-map"></div>
+    </section>
+
+    <!-- 오늘의 시는 길 아래, 읽고 싶을 때 펼칩니다. -->
+    <section class="view" data-view="today" hidden>
+      <div class="section-head">
+        <h2>오늘의 시</h2>
+        <a href="#path" class="link-quiet">길로 돌아가기</a>
+      </div>
+      <article id="today-poem" class="manuscript face-read"></article>
+      <aside id="today-note" class="reading-note"></aside>
     </section>
 
     <section class="view" data-view="library" hidden>
@@ -279,7 +322,7 @@
   </main>
 
   <nav class="tabbar" aria-label="화면 이동">
-    <button class="tab" data-view="today" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-path" /></svg>오늘</button>
+    <button class="tab" data-view="path" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-path" /></svg>길</button>
     <button class="tab" data-view="library"><svg class="icon" aria-hidden="true"><use href="#i-book" /></svg>시집</button>
     <button class="tab" data-view="room"><svg class="icon" aria-hidden="true"><use href="#i-chat" /></svg>방</button>
     <button class="tab" data-view="ranking"><svg class="icon" aria-hidden="true"><use href="#i-trophy" /></svg>랭킹</button>
@@ -291,6 +334,28 @@
   <div class="sheet-body" id="poem-dialog-body"></div>
   <form method="dialog" class="sheet-foot"><button class="btn btn-quiet">닫기</button></form>
 </dialog>
+
+<!-- ══════════════ 레슨 — 마디 하나를 걷는 전체 화면 ══════════════
+     탭이 아니라 덮는 화면입니다. 한 번에 한 걸음만 보여야 하는데
+     탭바와 상단바가 같이 있으면 집중이 흩어집니다. -->
+<section id="lesson" class="lesson" hidden aria-label="레슨">
+  <header class="lesson-bar">
+    <button class="icon-btn" id="lesson-close" type="button" aria-label="레슨 닫기">
+      <svg class="icon" aria-hidden="true"><use href="#i-x" /></svg>
+    </button>
+    <div class="lesson-bar-mid">
+      <div id="lesson-meter" class="meter" role="progressbar"
+           aria-label="이 마디의 진행" aria-valuemin="0" aria-valuemax="100"><i></i></div>
+    </div>
+    <span id="lesson-count" class="lesson-count"></span>
+  </header>
+  <h2 id="lesson-title" class="sr-only"></h2>
+  <div id="lesson-body" class="lesson-body"></div>
+  <footer class="lesson-foot">
+    <p id="lesson-feedback" class="lesson-feedback" role="status" hidden></p>
+    <button id="lesson-next" class="btn btn-primary btn-block btn-lg" type="button">확인</button>
+  </footer>
+</section>
 
 <div id="toasts" class="toasts" aria-live="polite"></div>
 

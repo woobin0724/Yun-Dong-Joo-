@@ -1,52 +1,12 @@
 /* 별 헤는 밤 — 프런트엔드
-   빌드 도구 없이 도는 표준 ES 모듈 하나입니다. */
+   빌드 도구 없이 도는 표준 ES 모듈입니다.
+   공용 도우미는 core.js, 「동주의 길」은 journey.js 에 있습니다. */
 
-// ───────── 작은 도우미 ─────────
-const $ = (sel, root = document) => root.querySelector(sel);
-const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
-
-/** 사용자 입력이 섞이는 자리에는 반드시 이 함수를 거칩니다. */
-const esc = (value) =>
-  String(value ?? '').replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  })[c]);
-
-/** 인라인 스프라이트의 아이콘 하나를 꺼냅니다. */
-const icon = (name, cls = '') =>
-  `<svg class="icon ${cls}" aria-hidden="true"><use href="#i-${name}" /></svg>`;
-
-const mascot = (mood = 'default') =>
-  `<svg class="mascot" viewBox="0 0 64 64" aria-hidden="true"><use href="#m-${mood}" /></svg>`;
-
-const num = (n) => Number(n || 0).toLocaleString('ko-KR');
-
-async function api(path, { method = 'GET', body } = {}) {
-  const res = await fetch(`/api${path}`, {
-    method,
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-    credentials: 'same-origin',
-  });
-  const text = await res.text();
-  const data = text ? JSON.parse(text) : {};
-  if (!res.ok) {
-    const err = new Error(data?.error?.message || '문제가 생겼습니다.');
-    err.code = data?.error?.code;
-    err.status = res.status;
-    throw err;
-  }
-  return data;
-}
-
-function toast(message, { tone = '', iconName = '', ms = 4000 } = {}) {
-  const el = document.createElement('div');
-  el.className = 'toast';
-  if (tone) el.dataset.tone = tone;
-  el.innerHTML = iconName ? icon(iconName) : '';
-  el.append(document.createTextNode(message)); // 텍스트는 노드로 붙여 주입을 막습니다
-  $('#toasts').append(el);
-  setTimeout(() => el.remove(), ms);
-}
+import {
+  $, $$, esc, icon, mascot, num, api, toast,
+  poemBodyHtml, poemHtml, formatWritten,
+} from './core.js';
+import { mountJourney, loadJourney } from './journey.js';
 
 const challengeToast = (c) =>
   toast(`${c.title} — ${c.description}`, { tone: 'star', iconName: 'star', ms: 5000 });
@@ -253,14 +213,15 @@ async function enterApp(user) {
   state.user = user;
   $('#gate').hidden = true;
   $('#app').hidden = false;
-  await Promise.all([loadToday(), loadRooms()]);
-  switchView(location.hash.slice(1) || 'today');
+  mountJourney({ onPoints: refreshPills });
+  await Promise.all([loadToday(), loadJourney(), loadRooms()]);
+  switchView(location.hash.slice(1) || 'path');
 }
 
 // ───────── 화면 전환 ─────────
 function switchView(name) {
   const views = $$('.view');
-  const target = views.some((v) => v.dataset.view === name) ? name : 'today';
+  const target = views.some((v) => v.dataset.view === name) ? name : 'path';
 
   for (const v of views) v.hidden = v.dataset.view !== target;
   document.body.dataset.view = target; // 토스트 위치가 화면마다 달라집니다
@@ -270,6 +231,7 @@ function switchView(name) {
   }
   if (location.hash.slice(1) !== target) history.replaceState(null, '', `#${target}`);
 
+  if (target === 'path') loadJourney();
   if (target === 'library') loadLibrary();
   if (target === 'room') renderRoomView();
   if (target === 'ranking') loadRanking();
@@ -277,7 +239,7 @@ function switchView(name) {
 }
 
 for (const tab of $$('.tab')) tab.addEventListener('click', () => switchView(tab.dataset.view));
-addEventListener('hashchange', () => switchView(location.hash.slice(1) || 'today'));
+addEventListener('hashchange', () => switchView(location.hash.slice(1) || 'path'));
 
 // ───────── 오늘 ─────────
 async function loadToday() {
@@ -285,12 +247,28 @@ async function loadToday() {
   renderToday();
 }
 
-function renderToday() {
-  const { poem, missions, stats } = state.today;
-
+/** 상단 알약. 길에서 점수가 오르면 레슨 화면에서도 이걸 부릅니다. */
+function renderPills(stats) {
   $('#streak-pill').innerHTML =
     stats.streak > 0 ? `${icon('flame')}${stats.streak}일` : `${icon('flame')}오늘 시작`;
   $('#points-pill').innerHTML = `${icon('star')}${num(stats.totalPoints)}`;
+}
+
+/** 레슨에서 점수를 받으면 서버에서 다시 읽어 알약을 고칩니다. */
+async function refreshPills() {
+  try {
+    const me = await api('/me');
+    renderPills(me.stats);
+    if (state.today) state.today.stats = { ...state.today.stats, ...me.stats };
+  } catch {
+    // 알약이 한 박자 늦는 것은 치명적이지 않습니다. 조용히 넘어갑니다.
+  }
+}
+
+function renderToday() {
+  const { poem, missions, stats } = state.today;
+
+  renderPills(stats);
 
   $('#today-poem').innerHTML = poemHtml(poem);
   $('#today-note').innerHTML = readingNoteHtml(poem);
@@ -319,22 +297,6 @@ function renderToday() {
  * 원고지에 놓이는 것은 시뿐입니다.
  * 연은 배열이고, 연 안의 행은 시인이 나눈 그대로 줄바꿈으로 남습니다.
  */
-function poemHtml(poem) {
-  const stanzas = poem.stanzas
-    .map(
-      (lines) =>
-        `<p class="stanza">${lines
-          .map((line) => `<span class="line">${esc(line)}</span>`)
-          .join('')}</p>`,
-    )
-    .join('');
-  return `
-    <h2 class="poem-title">${esc(poem.title)}${
-      poem.hanja ? `<span class="hanja">${esc(poem.hanja)}</span>` : ''
-    }</h2>
-    <p class="poem-byline">윤동주 · ${esc(formatWritten(poem.written))}</p>
-    <div class="poem-body${poem.form === 'prose' ? ' is-prose' : ''}">${stanzas}</div>`;
-}
 
 /**
  * 해설과 주제어. 시가 놓인 종이가 아니라 그 곁에 적힙니다.
@@ -355,17 +317,6 @@ function readingNoteHtml(poem) {
  * 사실인 것처럼 내보내지 않기 위해서입니다.
  * 어떤 항목이 이에 해당하는지는 `npm run content:check` 가 알려 줍니다.
  */
-function formatWritten(written) {
-  const [y, m, d] = String(written).split('-').map(Number);
-  if (d) {
-    const probe = new Date(Date.UTC(y, m - 1, d));
-    const real = probe.getUTCFullYear() === y && probe.getUTCMonth() === m - 1 && probe.getUTCDate() === d;
-    if (real) return `${y}년 ${m}월 ${d}일`;
-    return `${y}년 ${m}월`; // 날짜가 달력에 없습니다 — 확인 전까지 숨깁니다
-  }
-  if (m) return `${y}년 ${m}월`;
-  return `${y}년`;
-}
 
 function missionHtml(mission) {
   const head = `
@@ -795,7 +746,7 @@ async function loadMe() {
 function challengeHtml(c) {
   const meter =
     !c.earned && c.progress?.target
-      ? `<div class="meter"><i style="width:${Math.round(c.progress.ratio * 100)}%"></i></div>
+      ? `<div class="meter"><i style="--fill:${(c.progress.ratio ?? 0).toFixed(3)}"></i></div>
          <div class="challenge-desc">${c.progress.current} / ${c.progress.target}</div>`
       : '';
   return `<div class="challenge" data-earned="${c.earned}">
