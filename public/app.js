@@ -574,10 +574,20 @@ $('#join-room-form').addEventListener('submit', async (e) => {
 
 async function openRoom(roomId) {
   if (!roomId) return;
-  const { messages } = await api(`/rooms/${roomId}/messages?limit=60`);
+  const { messages, isOwner, reportReasons } = await api(`/rooms/${roomId}/messages?limit=60`);
   state.messages = messages;
+  state.roomOwner = Boolean(isOwner);
+  state.reportReasons = reportReasons || [];
+  $('#room-progress-btn').hidden = !state.roomOwner;
   renderMessages();
   connectStream(roomId);
+}
+
+/** 가리기·되돌리기는 보는 사람마다 결과가 다르므로(선생님은 원문, 나머지는 빈 자리) 서버에서 다시 받는다. */
+async function refetchMessages() {
+  const { messages } = await api(`/rooms/${state.activeRoomId}/messages?limit=60`);
+  state.messages = messages;
+  renderMessages({ keepScroll: true });
 }
 
 function connectStream(roomId) {
@@ -588,6 +598,8 @@ function connectStream(roomId) {
     if (payload.type === 'message') {
       state.messages.push(payload.message);
       renderMessages();
+    } else if (payload.type === 'hidden' || payload.type === 'unhidden') {
+      refetchMessages();
     } else if (payload.type === 'cheer') {
       const i = state.messages.findIndex((m) => m.id === payload.message.id);
       if (i >= 0) {
@@ -620,8 +632,128 @@ function renderMessages({ keepScroll = false } = {}) {
     });
   }
 
+  for (const btn of $$('.msg-more', log)) {
+    btn.addEventListener('click', () => openMessageActions(Number(btn.dataset.message)));
+  }
+
   if (!keepScroll || atBottom) log.scrollTop = log.scrollHeight;
 }
+
+// ── 글 하나에 대해: 신고 · 차단 · (선생님) 가리기 ──
+function openMessageActions(messageId) {
+  const msg = state.messages.find((m) => m.id === messageId);
+  if (!msg) return;
+  state.actionMessage = msg;
+  $('#msg-dialog-quote').textContent = msg.body ? msg.body.slice(0, 120) : '(가려진 글)';
+  $('#msg-dialog-owner').hidden = !state.roomOwner;
+  $('#msg-hide').textContent = msg.hidden ? '가린 것을 되돌리기' : '이 글 가리기';
+  const mine = msg.userId === state.user?.id;
+  $('#msg-report').hidden = mine;
+  $('#msg-block').hidden = mine;
+  $('#msg-reasons').innerHTML = state.reportReasons
+    .map((r) => `<button class="btn btn-sm" type="button" data-reason="${esc(r)}">${esc(r)}</button>`)
+    .join('');
+  $('#msg-dialog').showModal();
+}
+
+$('#msg-reasons').addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-reason]');
+  if (!btn) return;
+  const msg = state.actionMessage;
+  try {
+    const { hidden } = await api(`/rooms/${state.activeRoomId}/messages/${msg.id}/report`, {
+      method: 'POST',
+      body: { reason: btn.dataset.reason },
+    });
+    $('#msg-dialog').close();
+    toast(hidden ? '신고했습니다. 신고가 쌓여 글이 가려졌습니다.' : '신고했습니다. 누가 신고했는지는 보이지 않습니다.');
+  } catch (err) {
+    toast(err.message);
+  }
+});
+
+$('#msg-hide').addEventListener('click', async () => {
+  const msg = state.actionMessage;
+  try {
+    await api(`/rooms/${state.activeRoomId}/messages/${msg.id}/hide`, {
+      method: 'POST',
+      body: { hidden: !msg.hidden },
+    });
+    $('#msg-dialog').close();
+  } catch (err) {
+    toast(err.message);
+  }
+});
+
+$('#msg-block').addEventListener('click', async () => {
+  const msg = state.actionMessage;
+  try {
+    await api('/me/blocks', { method: 'POST', body: { userId: msg.userId } });
+    $('#msg-dialog').close();
+    toast(`${msg.authorName} 님을 차단했습니다. 「나」에서 풀 수 있습니다.`);
+    refetchMessages();
+  } catch (err) {
+    toast(err.message);
+  }
+});
+
+// ── 선생님 보기 ──
+$('#room-progress-btn').addEventListener('click', async () => {
+  let data;
+  try {
+    data = await api(`/rooms/${state.activeRoomId}/progress`);
+  } catch (err) {
+    toast(err.message);
+    return;
+  }
+  const { summary, members } = data;
+  $('#progress-summary').textContent =
+    `${num(summary.count)}명 · 오늘 목표를 채운 사람 ${num(summary.metToday)}명 · 멈춘 사람 ${num(summary.stalled)}명`;
+  $('#progress-list').innerHTML = members
+    .map((m) => {
+      const idle = m.lastActive === null ? '아직 시작 전' : m.idleDays === 0 ? '오늘' : `${num(m.idleDays)}일 전`;
+      return `<li class="progress-row" data-stalled="${m.stalled}">
+        <div class="progress-name">${esc(m.name)}${m.role === 'owner' ? ' <span class="muted">· 방장</span>' : ''}${
+          m.stalled ? ' <span class="pill-stall">멈춤</span>' : ''
+        }</div>
+        <div class="progress-nums">
+          <span>마디 ${num(m.nodesDone)} / ${num(m.totalNodes)}</span>
+          <span>연속 ${num(m.streak)}일</span>
+          <span>필사 ${num(m.transcribed)}편</span>
+          <span>오답 ${num(m.openMistakes)}</span>
+          <span>마지막 ${idle}</span>
+        </div>
+      </li>`;
+    })
+    .join('');
+  $('#progress-dialog').showModal();
+});
+
+// ── 방에 나누기 ──
+function openShare(type, id, preview) {
+  if (!state.rooms.length) {
+    toast('방에 들어가면 나눌 수 있습니다.');
+    return;
+  }
+  state.sharing = { type, id };
+  $('#share-preview').textContent = preview.slice(0, 160);
+  $('#share-room').innerHTML = state.rooms
+    .map((r) => `<option value="${r.id}" ${r.id === state.activeRoomId ? 'selected' : ''}>${esc(r.name)}</option>`)
+    .join('');
+  $('#share-dialog').showModal();
+}
+
+$('#share-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const roomId = Number($('#share-room').value);
+  try {
+    await api(`/rooms/${roomId}/share`, { method: 'POST', body: state.sharing });
+    $('#share-dialog').close();
+    toast('방에 나눴습니다.');
+  } catch (err) {
+    toast(err.message);
+  }
+});
 
 const BOT_ICON = { poem: 'book', mission: 'check', challenge: 'star', notice: 'info' };
 
@@ -629,12 +761,27 @@ function messageHtml(msg) {
   const isBot = msg.authorType === 'bot';
   const isMine = !isBot && msg.userId === state.user?.id;
 
+  // 가린 글. 원문이 빈 채로 왔으면 자리만 남긴다. 선생님과 글쓴이에게는 원문이
+  // 오고, 가려졌다는 표시를 붙인다.
+  if (msg.hidden && !msg.body) {
+    return `<div class="msg is-hidden" data-mine="${isMine}">
+      <div class="msg-bubble">가려진 글입니다.</div>
+    </div>`;
+  }
+
+  const SOURCE = { response: '한 줄 감상', transcription: '원고지 필사' };
   const shareTag =
     msg.kind === 'share' && msg.meta?.poemTitle
       ? `<span class="share-tag">「${esc(msg.meta.poemTitle)}」 · ${esc(
-          msg.meta.missionTitle || '감상',
+          SOURCE[msg.meta.source] || msg.meta.missionTitle || '감상',
         )}</span>`
       : '';
+  const hiddenTag = msg.hidden
+    ? `<span class="hidden-tag">가려진 글 — ${state.roomOwner ? '방장' : '글쓴이'}에게만 보입니다</span>`
+    : '';
+  const more = isBot
+    ? ''
+    : `<button class="icon-btn msg-more" type="button" data-message="${msg.id}" aria-label="이 글에 대해">${icon('more')}</button>`;
 
   const cheers = isBot
     ? ''
@@ -648,12 +795,12 @@ function messageHtml(msg) {
           }</button>`;
       }).join('')}</div>`;
 
-  return `<div class="msg" data-kind="${esc(msg.kind)}" data-bot="${isBot}" data-mine="${isMine}">
+  return `<div class="msg" data-kind="${esc(msg.kind)}" data-bot="${isBot}" data-mine="${isMine}" data-source="${esc(msg.meta?.source || '')}" data-hidden="${Boolean(msg.hidden)}">
     ${isBot || isMine ? '' : `<span class="msg-author">${esc(msg.authorName)}</span>`}
-    <div class="msg-bubble">${isBot ? icon(BOT_ICON[msg.kind] || 'info') : ''}${shareTag}<span>${esc(
+    <div class="msg-bubble">${isBot ? icon(BOT_ICON[msg.kind] || 'info') : ''}${hiddenTag}${shareTag}<span>${esc(
       msg.body,
     )}</span></div>
-    ${cheers}
+    <div class="msg-foot">${msg.hidden ? '' : cheers}${more}</div>
   </div>`;
 }
 
@@ -776,6 +923,7 @@ async function loadMe() {
   renderWalked(journey);
   renderGallery(trs.transcriptions);
   renderMyLines(lines.responses);
+  renderBlocks();
 
   const s = me.stats;
   // 표식은 여기에 두지 않습니다. 첫 화면 대기와 하루 완료에서는 표식이
@@ -869,9 +1017,42 @@ function renderGallery(items) {
       return `<figure class="sheet-card">
         <div class="sheet-mini" aria-hidden="true">${grid}</div>
         <figcaption><b>「${esc(t.title)}」</b><span>${esc(day)} · ${num(t.chars)}자</span></figcaption>
+        <button class="btn btn-quiet btn-sm" type="button" data-share="transcription" data-id="${t.id}">방에 나누기</button>
       </figure>`;
     })
     .join('');
+  bindShareButtons('#gallery', items);
+}
+
+async function renderBlocks() {
+  let blocks = [];
+  try {
+    ({ blocks } = await api('/me/blocks'));
+  } catch {
+    return;
+  }
+  $('#blocks-section').hidden = !blocks.length;
+  $('#blocks-list').innerHTML = blocks
+    .map(
+      (b) => `<li class="switch-row"><span>${esc(b.name)}</span>
+        <button class="btn btn-sm" type="button" data-unblock="${b.id}">차단 풀기</button></li>`,
+    )
+    .join('');
+  for (const btn of $$('#blocks-list [data-unblock]')) {
+    btn.addEventListener('click', async () => {
+      await api(`/me/blocks/${btn.dataset.unblock}`, { method: 'DELETE' });
+      renderBlocks();
+    });
+  }
+}
+
+function bindShareButtons(root, items) {
+  for (const btn of $$(`${root} [data-share]`)) {
+    btn.addEventListener('click', () => {
+      const item = items.find((x) => x.id === Number(btn.dataset.id));
+      openShare(btn.dataset.share, Number(btn.dataset.id), item?.text ?? '');
+    });
+  }
 }
 
 /** 레슨 끝에 남긴 한 줄 감상들. 채팅으로 흘러가지 않고 여기 남습니다. */
@@ -882,8 +1063,14 @@ function renderMyLines(items) {
   }
   $('#my-lines').innerHTML = items
     .slice(0, 12)
-    .map((r) => `<blockquote class="my-line"><p>${esc(r.text)}</p><cite>「${esc(r.title)}」</cite></blockquote>`)
+    .map(
+      (r) => `<blockquote class="my-line"><p>${esc(r.text)}</p>
+        <footer><cite>「${esc(r.title)}」</cite>
+        <button class="btn btn-quiet btn-sm" type="button" data-share="response" data-id="${r.id}">방에 나누기</button></footer>
+      </blockquote>`,
+    )
     .join('');
+  bindShareButtons('#my-lines', items);
 }
 
 function challengeHtml(c) {

@@ -317,7 +317,7 @@ export function finishNode(userId, nodeId) {
 export function myResponses(userId, limit = 50) {
   return getDb()
     .prepare(
-      `SELECT node_id AS nodeId, poem_id AS poemId, text, created_at AS createdAt
+      `SELECT id, node_id AS nodeId, poem_id AS poemId, text, created_at AS createdAt
          FROM responses WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`,
     )
     .all(userId, limit);

@@ -53,6 +53,7 @@
   <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.8" y="5.6" width="16.4" height="14.6" rx="2.2"/><path d="M3.8 10.2h16.4M8.4 3.4v4M15.6 3.4v4"/></symbol>
   <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><circle cx="12" cy="12" r="4.6"/><circle cx="12" cy="12" r="1.2"/></symbol>
   <symbol id="i-crown" viewBox="0 0 24 24"><path d="M3.8 17.4L5.4 7.2l4.3 4.1L12 5.4l2.3 5.9 4.3-4.1 1.6 10.2z"/><path d="M4.6 20.4h14.8"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.6" fill="currentColor" stroke="none"/></symbol>
   <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19.2V5.4"/><path d="M5.8 11.6L12 5.2l6.2 6.4"/></symbol>
   <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4.8v13.8"/><path d="M18.2 12.4L12 18.8l-6.2-6.4"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.8 6.8h14.4M9.6 6.8V5.2a1.4 1.4 0 0 1 1.4-1.4h2a1.4 1.4 0 0 1 1.4 1.4v1.6"/><path d="M6.6 6.8l.8 12a1.6 1.6 0 0 0 1.6 1.5h6a1.6 1.6 0 0 0 1.6-1.5l.8-12"/></symbol>
@@ -273,6 +274,7 @@
       <div id="room-main" hidden>
         <div class="room-bar">
           <select id="room-picker" aria-label="방 고르기"></select>
+          <button class="btn btn-sm" id="room-progress-btn" type="button" hidden>반 살펴보기</button>
           <button class="icon-btn" id="room-info-btn" type="button" aria-label="방 정보">
             <svg class="icon" aria-hidden="true"><use href="#i-info" /></svg>
           </button>
@@ -340,6 +342,10 @@
             <option value="">보통</option><option value="large">크게</option><option value="xlarge">아주 크게</option>
           </select></label>
       </div>
+      <div id="blocks-section" hidden>
+        <div class="section-head"><h2>차단한 사람</h2></div>
+        <ul id="blocks-list" class="blocks-list"></ul>
+      </div>
       <div class="view-foot">
         <button class="btn btn-quiet" id="logout-btn" type="button">
           <svg class="icon" aria-hidden="true"><use href="#i-logout" /></svg>로그아웃
@@ -356,6 +362,47 @@
     <button class="tab" data-view="me"><svg class="icon" aria-hidden="true"><use href="#i-user" /></svg>나</button>
   </nav>
 </div>
+
+<!-- 글 하나에 대해 할 수 있는 것. 신고·차단은 누구나, 가리기는 방을 만든 사람만. -->
+<dialog id="msg-dialog" class="sheet" aria-labelledby="msg-dialog-h">
+  <div class="sheet-body sheet-pad">
+    <h2 id="msg-dialog-h" class="sheet-h">이 글에 대해</h2>
+    <p id="msg-dialog-quote" class="msg-quote"></p>
+    <div id="msg-dialog-owner" class="stack" hidden>
+      <button class="btn btn-block" type="button" id="msg-hide">이 글 가리기</button>
+    </div>
+    <fieldset id="msg-report" class="stack report-set">
+      <legend>신고하기</legend>
+      <div id="msg-reasons" class="reason-list"></div>
+      <p class="note">서로 다른 세 사람이 신고하면 글이 저절로 가려집니다. 누가 신고했는지는 아무에게도 보이지 않습니다.</p>
+    </fieldset>
+    <button class="btn btn-quiet btn-block" type="button" id="msg-block">이 사람 차단하기</button>
+    <p class="note">차단하면 내 화면에서만 이 사람의 글이 사라집니다. 상대는 알 수 없습니다. <span class="nowrap">「나」에서</span> 풀 수 있습니다.</p>
+  </div>
+  <form method="dialog" class="sheet-foot"><button class="btn btn-quiet">닫기</button></form>
+</dialog>
+
+<!-- 선생님 보기. 숫자만 보입니다. 학생의 글은 학생이 나눌 때만 방에 나옵니다. -->
+<dialog id="progress-dialog" class="sheet" aria-labelledby="progress-h">
+  <div class="sheet-body sheet-pad">
+    <h2 id="progress-h" class="sheet-h">반 살펴보기</h2>
+    <p id="progress-summary" class="note"></p>
+    <ul id="progress-list" class="progress-list"></ul>
+    <p class="note">학생이 쓴 한 줄 감상과 필사의 원문은 여기 나오지 않습니다. 학생이 방에 나눈 것만 방에서 볼 수 있습니다. '멈춤'은 사흘 넘게 아무것도 하지 않은 사람입니다 — 혼낼 사람이 아니라 말을 걸어 볼 사람입니다.</p>
+  </div>
+  <form method="dialog" class="sheet-foot"><button class="btn btn-quiet">닫기</button></form>
+</dialog>
+
+<!-- 방에 나누기 -->
+<dialog id="share-dialog" class="sheet" aria-labelledby="share-h">
+  <form id="share-form" class="sheet-body sheet-pad stack">
+    <h2 id="share-h" class="sheet-h">방에 나누기</h2>
+    <p id="share-preview" class="msg-quote"></p>
+    <label class="field"><span>어느 방에</span><select id="share-room" name="room"></select></label>
+    <button class="btn btn-primary btn-block" type="submit">나누기</button>
+  </form>
+  <form method="dialog" class="sheet-foot"><button class="btn btn-quiet">닫기</button></form>
+</dialog>
 
 <dialog id="poem-dialog" class="sheet" aria-label="시 전문">
   <div class="sheet-body" id="poem-dialog-body"></div>

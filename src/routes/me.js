@@ -17,6 +17,7 @@ import {
 import { completeProfile, loginMethods, suggestHandle } from '../services/users.js';
 import { requireAuth, asyncRoute } from './middleware.js';
 import { goalState, setGoal } from '../services/goal.js';
+import { blockUser, unblockUser, blockedList } from '../services/moderation.js';
 
 export const meRouter = Router();
 
@@ -129,3 +130,19 @@ meRouter.post(
     res.json(result);
   }),
 );
+
+/** 차단 — 차단한 사람의 화면에서만 상대 글이 사라진다. 상대는 모른다. */
+meRouter.get('/blocks', (req, res) => {
+  res.json({ blocks: blockedList(req.user.id) });
+});
+
+meRouter.post(
+  '/blocks',
+  asyncRoute((req, res) => {
+    res.status(201).json(blockUser({ userId: req.user.id, targetId: Number(req.body?.userId) }));
+  }),
+);
+
+meRouter.delete('/blocks/:id', (req, res) => {
+  res.json(unblockUser({ userId: req.user.id, targetId: Number(req.params.id) }));
+});

@@ -207,6 +207,30 @@ if (await page.locator('#create-room-form [name=name]').count()) {
   await page.click('#create-room-form button');
   await page.waitForSelector('#chat-log .msg', { timeout: 10000 }).catch(() => {});
 }
+// 방의 대화상자 — 글 메뉴, 반 살펴보기. 덮는 화면이라 순회에 안 잡힌다.
+await page.fill('#chat-input', '「자화상」의 우물이 오래 남습니다.');
+await page.click('#chat-form button');
+await page.waitForTimeout(700);
+for (const theme of THEMES) {
+  await page.evaluate((t) => (document.documentElement.dataset.theme = t), theme);
+  await page.locator('#chat-log .msg-more').last().click();
+  await page.waitForSelector('#msg-dialog[open]');
+  add(`글 메뉴·${theme}`, await measure());
+  checked++;
+  await page.click('#msg-hide');
+  await page.waitForTimeout(700);
+  add(`가린 글·${theme}`, await measure());
+  checked++;
+  await page.locator('#chat-log .msg-more').last().click();
+  await page.waitForSelector('#msg-dialog[open]');
+  await page.click('#msg-hide'); // 되돌리기
+  await page.waitForTimeout(500);
+  await page.click('#room-progress-btn');
+  await page.waitForSelector('#progress-dialog[open]');
+  add(`반 살펴보기·${theme}`, await measure());
+  checked++;
+  await page.evaluate(() => document.querySelector('#progress-dialog').close());
+}
 
 for (const theme of THEMES) {
   for (const accent of ACCENTS) {

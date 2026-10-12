@@ -321,6 +321,31 @@ const MIGRATIONS = [
       ALTER TABLE users ADD COLUMN daily_goal INTEGER;
     `,
   },
+  {
+    name: '008-room-safety',
+    sql: `
+      -- 가린 글. 지우지 않고 가린다 — 지우면 무엇이 문제였는지 운영자가 다시 볼 수 없다.
+      ALTER TABLE messages ADD COLUMN hidden_at TEXT;
+      ALTER TABLE messages ADD COLUMN hidden_by TEXT;   -- 'owner' | 'reports'
+
+      -- 신고. 한 사람이 한 글에 한 번.
+      CREATE TABLE reports (
+        message_id  INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+        reporter_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        reason      TEXT NOT NULL,
+        created_at  TEXT NOT NULL,
+        PRIMARY KEY (message_id, reporter_id)
+      );
+
+      -- 차단. 차단한 사람에게만 상대의 글이 보이지 않는다. 상대는 차단당한 줄 모른다.
+      CREATE TABLE blocks (
+        blocker_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        blocked_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (blocker_id, blocked_id)
+      );
+    `,
+  },
 ];
 
 function applyMigrations(database) {

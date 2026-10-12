@@ -4,7 +4,7 @@ import express from 'express';
 import { config } from './config.js';
 import { getDb } from './db.js';
 import { cookieMiddleware, attachUser, errorHandler } from './routes/middleware.js';
-import { securityHeaders } from './routes/security.js';
+import { securityHeaders, sameOriginWrites } from './routes/security.js';
 import { compression } from './routes/compress.js';
 import { authRouter } from './routes/auth.js';
 import { poemsRouter } from './routes/poems.js';
@@ -40,6 +40,7 @@ export function createApp() {
     });
   });
 
+  app.use('/api', sameOriginWrites);
   app.use('/api/auth', authRouter);
   app.use('/api/poems', poemsRouter);
   app.use('/api/missions', missionsRouter);

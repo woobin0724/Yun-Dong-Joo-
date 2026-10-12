@@ -179,5 +179,8 @@ function serializeMessage(row, cheerMap) {
     meta,
     cheers: cheerMap.get(Number(row.id)) || [],
     createdAt: row.created_at,
+    // 가린 글인지. 원문을 누구에게 보여 줄지는 moderation.forViewer 가 정한다.
+    hiddenAt: row.hidden_at ?? null,
+    hiddenBy: row.hidden_by ?? null,
   };
 }

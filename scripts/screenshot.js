@@ -175,6 +175,16 @@ await page.click('#chat-form button');
 await page.waitForTimeout(900);
 await shot('08-room', false);
 await collect('방');
+await page.locator('#chat-log .msg-more').last().click();
+await page.waitForSelector('#msg-dialog[open]');
+await shot('08a-room-message-menu', false);
+await collect('방(글 메뉴)');
+await page.evaluate(() => document.querySelector('#msg-dialog').close());
+await page.click('#room-progress-btn');
+await page.waitForSelector('#progress-dialog[open]');
+await shot('08b-room-progress', false);
+await collect('방(반 살펴보기)');
+await page.evaluate(() => document.querySelector('#progress-dialog').close());
 
 // ── 랭킹 ──
 await page.click('.tab[data-view="ranking"]');
