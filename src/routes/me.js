@@ -15,8 +15,9 @@ import {
   sendToUser,
 } from '../services/push.js';
 import { completeProfile, loginMethods, suggestHandle } from '../services/users.js';
-import { requireAuth, asyncRoute } from './middleware.js';
+import { requireAuth, asyncRoute, clearSessionCookie } from './middleware.js';
 import { goalState, setGoal } from '../services/goal.js';
+import { deleteAccount } from '../services/account.js';
 import { blockUser, unblockUser, blockedList } from '../services/moderation.js';
 
 export const meRouter = Router();
@@ -146,3 +147,13 @@ meRouter.post(
 meRouter.delete('/blocks/:id', (req, res) => {
   res.json(unblockUser({ userId: req.user.id, targetId: Number(req.params.id) }));
 });
+
+/** 계정 지우기 — 아이디를 한 번 더 적어야 한다. 되돌릴 수 없다. */
+meRouter.delete(
+  '/',
+  asyncRoute((req, res) => {
+    const result = deleteAccount({ userId: req.user.id, confirmHandle: req.body?.confirmHandle });
+    clearSessionCookie(res);
+    res.json(result);
+  }),
+);

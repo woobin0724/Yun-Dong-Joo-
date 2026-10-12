@@ -43,7 +43,8 @@ await page.fill('#signup-form [name=handle]', handle);
 await page.fill('#signup-form [name=displayName]', '한결');
 await page.fill('#signup-form [name=pin]', '1234');
 await page.click('#signup-form button[type=submit]');
-await page.waitForSelector('#mission-list .mission', { timeout: 15000 });
+// 미션은 이제 '오늘의 시' 화면에 있어 숨겨져 있다. 그려졌는지만 본다.
+await page.waitForSelector('#mission-list .mission', { state: 'attached', timeout: 15000 });
 
 // 처음 들어온 사람에게는 하루 목표를 묻는 화면이 지도 위를 덮는다.
 // 고르면 곧장 첫 마디가 열리므로 그것도 닫고 지도로 돌아온다.

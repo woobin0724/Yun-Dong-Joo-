@@ -24,15 +24,42 @@ export const mascot = (mood = 'default') =>
 
 export const num = (n) => Number(n || 0).toLocaleString('ko-KR');
 
+/**
+ * 서버에 묻는다. 실패는 늘 한국어 문장을 가진 Error 로 던진다.
+ * 브라우저가 주는 "Failed to fetch" 가 그대로 학생 화면에 뜨던 것을 막는다.
+ * err.offline 이 true 면 네트워크가 끊긴 것이다.
+ */
 export async function api(path, { method = 'GET', body } = {}) {
-  const res = await fetch(`/api${path}`, {
-    method,
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-    credentials: 'same-origin',
-  });
+  let res;
+  try {
+    res = await fetch(`/api${path}`, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+      credentials: 'same-origin',
+    });
+  } catch {
+    const err = new Error(
+      navigator.onLine === false
+        ? '인터넷에 연결되어 있지 않습니다. 연결되면 다시 해 주세요.'
+        : '서버에 닿지 못했습니다. 잠시 뒤 다시 해 주세요.',
+    );
+    err.offline = true;
+    throw err;
+  }
   const text = await res.text();
-  const data = text ? JSON.parse(text) : {};
+  let data = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = {};
+  }
+  if (res.status === 503 && data?.error) {
+    const err = new Error(data.error);
+    err.offline = true;
+    err.status = 503;
+    throw err;
+  }
   if (!res.ok) {
     const err = new Error(data?.error?.message || data?.error || '문제가 생겼습니다.');
     err.code = data?.error?.code;
@@ -92,3 +119,31 @@ export function poemHtml(poem) {
 
 /** 「제목」 뒤에 맞는 조사를 붙입니다. 「서시」를 · 「길」을 */
 export const titled = (title, particle = eulReul) => `「${esc(title)}」${particle(title)}`;
+
+/**
+ * 화면 하나를 불러온다. 실패하면 빈 화면으로 두지 않고 그 자리에 이유와 '다시 시도'
+ * 를 그린다. 예전에는 네트워크가 끊기면 시집·「나」가 조용히 비어 버렸고,
+ * 처리하지 않은 오류가 여덟 건 쌓였다.
+ */
+export async function guarded(load, { into, retry = load } = {}) {
+  const slot = typeof into === 'string' ? $(into) : into;
+  try {
+    await load();
+    if (slot) slot.querySelector(':scope > .load-failed')?.remove();
+  } catch (err) {
+    if (!slot) {
+      toast(err.message);
+      return;
+    }
+    slot.querySelector(':scope > .load-failed')?.remove();
+    const box = document.createElement('div');
+    box.className = 'load-failed';
+    box.setAttribute('role', 'alert');
+    box.innerHTML = `${icon('info')}<span></span><button class="btn btn-sm" type="button">다시 시도</button>`;
+    box.querySelector('span').textContent = err.offline
+      ? `${err.message}`
+      : `불러오지 못했습니다. ${err.message}`;
+    box.querySelector('button').addEventListener('click', () => guarded(retry, { into: slot, retry }));
+    slot.prepend(box);
+  }
+}

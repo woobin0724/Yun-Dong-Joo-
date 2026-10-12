@@ -498,3 +498,19 @@ test('오늘 걸은 마디가 하루 목표에 든다', async () => {
   assert.equal(g.doneToday, 1);
   assert.equal(g.met, true);
 });
+
+test("'화자의 마음' — 다른 시에서 빌려 온 보기는 어느 시 본문에도 없는 말이다", async () => {
+  // 「새로운 길」에 '흰옷' 이 보기로 나왔었다. 흰옷이 없는 시에서 흰옷이
+  // '가장 크게 남을' 수는 없다.
+  const { POEMS } = await import('../src/content/poems.js');
+  const anyBody = POEMS.map((p) => p.stanzas.flat().join(' ')).join(' ');
+  for (const node of NODES) {
+    const poem = POEMS.find((p) => p.id === node.poemId);
+    const step = buildLesson(1, node.id).steps.find((s) => s.type === 'feeling');
+    if (!step) continue;
+    for (const opt of step.options) {
+      if ((poem.themes ?? []).includes(opt)) continue;
+      assert.ok(!anyBody.includes(opt), `${node.id}: 빌려 온 보기 "${opt}" 는 어느 시 본문에 나오는 말입니다`);
+    }
+  }
+});

@@ -189,6 +189,9 @@
 
 <!-- ════════════ 본 화면 ════════════ -->
 <div id="app" hidden>
+  <p id="offline-bar" class="offline-bar" role="status" hidden>
+    인터넷에 연결되어 있지 않습니다. 받아 둔 시는 읽을 수 있고, 걸음과 필사는 연결되면 낼 수 있습니다.
+  </p>
   <header class="topbar">
     <h1 class="topbar-title">별 헤는 밤</h1>
     <span id="streak-pill" class="stat-pill" data-kind="streak"></span>
@@ -201,7 +204,7 @@
   <main>
     <!-- ══════════════ 길 — 홈 ══════════════
          이 앱을 열면 가장 먼저 보이는 화면입니다. 누를 것은 큰 버튼 하나뿐이고,
-         그 아래에 오늘 할 일과 지도가 차례로 있습니다. 예전에는 이 자리에 긴 시가
+         그 아래에 오늘의 시로 가는 한 줄과 지도가 있습니다. 예전에는 이 자리에 긴 시가
          먼저 놓여서, 360×740 화면에서 첫 미션 카드가 y=1,222px 에 있었습니다. -->
     <section class="view" data-view="path">
       <div class="path-top">
@@ -223,15 +226,16 @@
         <p>길의 끝까지 걸었습니다.</p>
       </div>
 
-      <div class="section-head">
-        <h2>오늘 할 일</h2>
-        <span id="today-left" class="muted"></span>
-      </div>
-      <p class="path-aside">
-        <a href="#today" class="link-quiet">오늘의 시 펼쳐 보기</a>
-      </p>
-      <div id="mission-list" class="mission-list"></div>
-      <div id="today-done" class="day-done" hidden></div>
+      <!-- 홈에서 누를 것은 큰 버튼 하나입니다. 오늘의 시와 그 미션은 따로 고리를
+           이루므로 여기에는 그리로 가는 한 줄만 둡니다. 둘을 나란히 두면 '기능은
+           다 있는데 무엇부터 할지 모르는 앱' 이 됩니다. -->
+      <a href="#today" class="today-link" id="today-link">
+        <span class="today-link-text">
+          <span class="today-link-h">오늘의 시</span>
+          <span id="today-link-sub" class="today-link-sub"></span>
+        </span>
+        <svg class="icon" aria-hidden="true"><use href="#i-right" /></svg>
+      </a>
 
       <section id="exam-card" class="exam-card" hidden aria-label="시험 대비"></section>
 
@@ -249,6 +253,9 @@
       </div>
       <article id="today-poem" class="manuscript face-read"></article>
       <aside id="today-note" class="reading-note"></aside>
+      <div class="section-head"><h2>오늘의 시로 해 볼 것</h2><span id="today-left" class="muted"></span></div>
+      <div id="mission-list" class="mission-list"></div>
+      <div id="today-done" class="day-done" hidden></div>
     </section>
 
     <section class="view" data-view="library" hidden>
@@ -359,6 +366,7 @@
         <button class="btn btn-quiet" id="logout-btn" type="button">
           <svg class="icon" aria-hidden="true"><use href="#i-logout" /></svg>로그아웃
         </button>
+        <button class="btn btn-quiet" id="delete-account-btn" type="button">계정 지우기</button>
       </div>
     </section>
   </main>
@@ -411,6 +419,26 @@
     <button class="btn btn-primary btn-block" type="submit">나누기</button>
   </form>
   <form method="dialog" class="sheet-foot"><button class="btn btn-quiet">닫기</button></form>
+</dialog>
+
+<!-- 계정 지우기. 되돌릴 수 없으므로 무엇이 지워지는지 먼저 말하고, 아이디를 한 번 더 적게 합니다. -->
+<dialog id="delete-dialog" class="sheet" aria-labelledby="delete-h">
+  <form id="delete-form" class="sheet-body sheet-pad stack">
+    <h2 id="delete-h" class="sheet-h">계정 지우기</h2>
+    <p class="note">지운 계정은 되돌릴 수 없습니다. 아래가 모두 지워집니다.</p>
+    <ul class="delete-list">
+      <li>걸어온 길, 남긴 한 줄, 옮겨 적은 시, 오답 노트</li>
+      <li>점수, 연속일, 도전과제, 알림 설정</li>
+      <li>방에 쓴 글과 응원</li>
+      <li>구글 연결과 로그인 기록</li>
+    </ul>
+    <p class="note">내가 만든 방은 지워지지 않고, 가장 먼저 들어온 사람이 방장이 됩니다. 아무도 없으면 방도 지워집니다.</p>
+    <label class="field"><span>확인을 위해 아이디를 적어 주세요 — <b id="delete-handle"></b></span>
+      <input name="confirm" autocomplete="off" autocapitalize="off" spellcheck="false" required /></label>
+    <p id="delete-error" class="form-error" role="alert"></p>
+    <button class="btn btn-danger btn-block" type="submit" disabled>계정을 지웁니다</button>
+  </form>
+  <form method="dialog" class="sheet-foot"><button class="btn btn-quiet">그만두기</button></form>
 </dialog>
 
 <dialog id="poem-dialog" class="sheet" aria-label="시 전문">

@@ -83,7 +83,8 @@ const handle = `dongju${Date.now().toString(36)}`;
 await page.fill('#welcome-form [name=displayName]', '동주');
 await page.fill('#welcome-form [name=handle]', handle);
 await page.click('#welcome-form button');
-await page.waitForSelector('#mission-list .mission', { timeout: 10000 });
+// 미션은 이제 '오늘의 시' 화면에 있어 숨겨져 있다. 그려졌는지만 본다.
+await page.waitForSelector('#mission-list .mission', { state: 'attached', timeout: 10000 });
 await page.waitForTimeout(800);
 await shot('g5-after-signup');
 console.log('정한 아이디:', handle);
@@ -95,7 +96,8 @@ await page.waitForSelector('#gate:not([hidden])');
 await page.click('#google-btn');
 await page.waitForURL(/4100/, { timeout: 8000 });
 await page.click('#returning-user');
-await page.waitForSelector('#mission-list .mission', { timeout: 10000 });
+// 미션은 이제 '오늘의 시' 화면에 있어 숨겨져 있다. 그려졌는지만 본다.
+await page.waitForSelector('#mission-list .mission', { state: 'attached', timeout: 10000 });
 // 홈이 '오늘' 에서 '길' 로 바뀌었다.
 console.log('두 번째 로그인 — 환영 화면 건너뜀:', page.url().includes('#path'));
 await shot('g6-returning');

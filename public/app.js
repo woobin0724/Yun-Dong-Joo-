@@ -4,7 +4,7 @@
 
 import {
   $, $$, esc, icon, mascot, num, api, toast,
-  poemBodyHtml, poemHtml, formatWritten, euroRo, iGa,
+  poemBodyHtml, poemHtml, formatWritten, euroRo, iGa, guarded,
 } from './core.js';
 import { mountJourney, loadJourney } from './journey.js';
 import { mountTranscribe, openTranscribe, layout } from './transcribe.js';
@@ -182,8 +182,20 @@ $('#signup-form').addEventListener('submit', async (e) => {
 });
 
 $('#logout-btn').addEventListener('click', async () => {
-  await api('/auth/logout', { method: 'POST' });
+  try {
+    await api('/auth/logout', { method: 'POST' });
+  } catch (err) {
+    toast(err.message);
+    return;
+  }
   state.eventSource?.close();
+  // 오프라인용으로 받아 둔 시집 응답에는 '읽음' 표시가 섞여 있다. 같은 기기를
+  // 다른 사람이 쓸 수 있으니 나갈 때 비운다.
+  try {
+    await caches.delete('byeol-poems');
+  } catch {
+    // 캐시를 못 쓰는 브라우저 — 비울 것도 없다.
+  }
   location.reload();
 });
 
@@ -221,7 +233,12 @@ async function enterApp(user) {
     if (document.body.dataset.view === 'path') loadExamCard();
   });
   mountTranscribe({ onSave: () => { refreshPills(); if (document.body.dataset.view === 'me') loadMe(); } });
-  await Promise.all([loadToday(), loadJourney(), loadRooms()]);
+  // 하나가 실패해도 나머지는 뜬다. 예전에는 셋 중 하나만 실패해도 앱에 들어가지 못했다.
+  await Promise.all([
+    guarded(loadToday, { into: 'section[data-view="today"]' }),
+    guarded(loadJourney, { into: 'section[data-view="path"]' }),
+    guarded(loadRooms, { into: 'section[data-view="room"]' }),
+  ]);
   switchView(location.hash.slice(1) || 'path');
 }
 
@@ -238,14 +255,16 @@ function switchView(name) {
   }
   if (location.hash.slice(1) !== target) history.replaceState(null, '', `#${target}`);
 
+  // 화면마다 실패하면 그 자리에 이유와 '다시 시도' 가 뜬다. 빈 화면으로 두지 않는다.
+  const into = `section[data-view="${target}"]`;
   if (target === 'path') {
-    loadJourney();
-    loadExamCard();
+    guarded(loadJourney, { into });
+    guarded(loadExamCard, { into: '#exam-card' });
   }
-  if (target === 'library') loadLibrary();
-  if (target === 'room') renderRoomView();
-  if (target === 'ranking') loadRanking();
-  if (target === 'me') loadMe();
+  if (target === 'library') guarded(loadLibrary, { into });
+  if (target === 'room') guarded(renderRoomView, { into });
+  if (target === 'ranking') guarded(loadRanking, { into });
+  if (target === 'me') guarded(loadMe, { into });
 }
 
 for (const tab of $$('.tab')) tab.addEventListener('click', () => switchView(tab.dataset.view));
@@ -295,6 +314,8 @@ function renderToday() {
 
   const left = missions.filter((m) => !m.completed).length;
   $('#today-left').textContent = left ? `${left}개 남음` : '다 했습니다';
+  // 지도에 남은 한 줄. 무엇이 오늘의 시인지, 해 볼 것이 몇 개 남았는지만.
+  $('#today-link-sub').innerHTML = `「${esc(poem.title)}」 · ${left ? `해 볼 것 ${left}개` : '다 했습니다'}`;
 
   const done = $('#today-done');
   done.hidden = left > 0;
@@ -566,7 +587,7 @@ async function loadRooms() {
   if (!rooms.some((r) => r.id === state.activeRoomId)) state.activeRoomId = rooms[0]?.id ?? null;
 }
 
-function renderRoomView() {
+async function renderRoomView() {
   const has = state.rooms.length > 0;
   $('#room-empty').hidden = has;
   $('#room-main').hidden = !has;
@@ -581,12 +602,12 @@ function renderRoomView() {
     )
     .join('');
 
-  openRoom(state.activeRoomId);
+  return openRoom(state.activeRoomId);
 }
 
 $('#room-picker').addEventListener('change', (e) => {
   state.activeRoomId = Number(e.target.value);
-  openRoom(state.activeRoomId);
+  guarded(() => openRoom(state.activeRoomId), { into: 'section[data-view="room"]' });
 });
 
 $('#room-info-btn').addEventListener('click', async () => {
@@ -1275,3 +1296,58 @@ async function start() {
 }
 
 await start();
+
+// ───────── 연결 상태 ─────────
+// 끊기면 맨 위에 한 줄. 무엇이 되고 무엇이 안 되는지를 말한다.
+function renderConnection() {
+  $('#offline-bar').hidden = navigator.onLine !== false;
+}
+addEventListener('online', () => {
+  renderConnection();
+  // 돌아오면 지금 화면을 다시 불러온다. 실패 칸이 떠 있었으면 그것도 지워진다.
+  if (state.user) switchView(document.body.dataset.view || 'path');
+});
+addEventListener('offline', renderConnection);
+renderConnection();
+
+// 마지막 그물. 화면 어딘가에서 처리하지 못한 오류가 학생에게 영어로 뜨거나
+// 조용히 묻히지 않게, 같은 말은 한 번만 한국어로 알린다. 콘솔에는 그대로 남긴다.
+const told = new Set();
+addEventListener('unhandledrejection', (e) => {
+  const msg = e.reason?.offline ? e.reason.message : '문제가 생겼습니다. 화면을 새로 고쳐 주세요.';
+  console.error(e.reason);
+  e.preventDefault();
+  if (told.has(msg)) return;
+  told.add(msg);
+  setTimeout(() => told.delete(msg), 8000);
+  toast(msg);
+});
+
+// ───────── 계정 지우기 ─────────
+$('#delete-account-btn').addEventListener('click', () => {
+  $('#delete-handle').textContent = state.user.handle;
+  $('#delete-form').reset();
+  $('#delete-error').textContent = '';
+  $('#delete-form button[type=submit]').disabled = true;
+  $('#delete-dialog').showModal();
+});
+// 아이디가 맞을 때만 버튼이 켜진다. 누르다 지우는 일을 막는다.
+$('#delete-form [name=confirm]').addEventListener('input', (e) => {
+  $('#delete-form button[type=submit]').disabled = e.target.value.trim() !== state.user.handle;
+});
+$('#delete-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    await api('/me', { method: 'DELETE', body: { confirmHandle: e.target.confirm.value } });
+  } catch (err) {
+    $('#delete-error').textContent = err.message;
+    return;
+  }
+  state.eventSource?.close();
+  try {
+    await caches.delete('byeol-poems');
+  } catch {
+    // 캐시를 못 쓰는 브라우저 — 비울 것도 없다.
+  }
+  location.replace('/');
+});

@@ -237,8 +237,16 @@ function buildFeeling(_rng, poem, nodeId) {
   if (themes.length < 2) return null;
   const rng = makeRng(`feeling:${nodeId}`);
   // 이 시의 결 중 둘, 다른 시의 결 중 둘. 어느 쪽도 오답이 아니다.
+  //
+  // 다른 시에서 빌려 오는 보기는 **어느 시 본문에도 나오지 않는 말**로만 쓴다.
+  // themes 에는 '그리움' 같은 마음과 '흰옷' 같은 심상이 섞여 있는데, 데이터에 둘을
+  // 가르는 기준이 없다. 그 목록을 내가 지어 넣으면 그것이 곧 해석이 된다. 그래서
+  // 원리로 막는다 — 「새로운 길」에 '흰옷' 이 보기로 나오면, 이 시에 흰옷이 없으니
+  // 그것이 '가장 크게 남을' 수가 없다. 본문에 없는 추상어는 어느 시를 읽고도 남을
+  // 수 있다. 이 시 자신의 결은 본문에 나와도 그대로 둔다.
+  const anyBody = POEMS.map((p) => allLines(p).join(' ')).join(' ');
   const others = [...new Set(POEMS.flatMap((p) => (p.id === poem.id ? [] : p.themes ?? [])))]
-    .filter((t) => !themes.includes(t))
+    .filter((t) => !themes.includes(t) && !anyBody.includes(t))
     .sort(); // 마디마다 같은 출발점에서 뽑도록 차례를 못박는다
   const options = shuffled(rng, [...sample(rng, themes, 2), ...sample(rng, others, 2)]);
   return {

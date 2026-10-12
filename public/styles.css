@@ -1217,7 +1217,8 @@ body[data-view='room'] .toasts {
   margin-bottom: var(--sp-6);
 }
 .cta-label { font-size: var(--text-lg); font-weight: 700; }
-.cta-sub { font-family: var(--font-poem); font-size: var(--text-sm); opacity: 0.9; }
+/* 투명도로 흐리게 하지 않는다 — 다크에서 마우스를 올리면 4.22:1 로 떨어졌다. */
+.cta-sub { font-family: var(--font-poem); font-size: var(--text-sm); }
 .cta-sub:empty { display: none; }
 
 .path-aside { margin: calc(var(--sp-3) * -1) 0 var(--sp-3); }
@@ -1765,3 +1766,67 @@ details.chapter > .node-list { margin-top: var(--sp-3); }
 }
 .library-group-h span { font-family: var(--font-ui); font-size: var(--text-xs); color: var(--ink-mute); font-weight: 400; }
 .poem-row-hit { font-family: var(--font-poem); color: var(--ink-soft); }
+
+/* ═══════════════ 연결이 끊겼을 때 ═══════════════ */
+.offline-bar {
+  margin: 0;
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--ink);
+  color: var(--bg);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  text-align: center;
+}
+.load-failed {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--alert);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--alert) 8%, var(--surface));
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+.load-failed .icon { flex: none; color: var(--alert); }
+.load-failed span { flex: 1; }
+
+/* 지도에서 오늘의 시로 가는 한 줄 */
+.today-link {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 56px;
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+}
+.today-link:hover { border-color: var(--line-strong); }
+.today-link-text { flex: 1; display: grid; gap: 1px; }
+.today-link-h { font-weight: 600; }
+.today-link-sub { font-family: var(--font-poem); font-size: var(--text-sm); color: var(--ink-soft); }
+.today-link .icon { color: var(--ink-mute); }
+
+/* 계정 지우기 — 되돌릴 수 없는 버튼은 색으로도 다르게. 글씨로도 '지웁니다' 라고 적는다. */
+.btn-danger {
+  background: var(--alert);
+  border-color: var(--alert);
+  /* 흰 글씨를 박으면 다크(분홍 바탕)에서 1.93:1 로 떨어진다. 바탕색을 글자로 쓰면
+     두 테마 모두에서 뒤집혀 맞는다(라이트 6.26:1 · 다크 9.12:1). */
+  color: var(--bg);
+  font-weight: 700;
+  box-shadow: 0 var(--lift) 0 color-mix(in srgb, var(--alert) 70%, var(--ink));
+}
+/* .btn:hover:not(:disabled) 가 더 구체적이라, 따로 두지 않으면 마우스를 올렸을 때
+   배경이 회색이 되고 바탕색 글자가 그 위에서 1.1:1 로 사라진다(대비 검사가 잡았다). */
+.btn-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--alert) 86%, var(--ink));
+  border-color: color-mix(in srgb, var(--alert) 86%, var(--ink));
+}
+.btn-danger:disabled { background: var(--surface-2); border-color: transparent; color: var(--ink-mute); box-shadow: none; }
+.delete-list { margin: 0; padding-left: var(--sp-5); display: grid; gap: var(--sp-1); font-size: var(--text-sm); color: var(--ink-soft); line-height: 1.7; }
+#delete-account-btn { color: var(--alert); }

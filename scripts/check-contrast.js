@@ -36,10 +36,24 @@ const page = await ctx.newPage();
 
 await page.goto(BASE, { waitUntil: 'networkidle' });
 await page.waitForSelector('#gate:not([hidden])');
+// 전환 효과를 끈다. 켜 둔 채로 재면 버튼이 회색에서 빨강으로 바뀌는 180ms 도중의
+// 색을 재게 되어, 멀쩡한 버튼이 1.1:1 로 걸렸다. 재야 할 것은 멈춘 뒤의 색이다.
+await page.addStyleTag({
+  content: '*, *::before, *::after { transition: none !important; animation: none !important; }',
+});
 
 /** 로그인 화면도 검사 대상이다. 먼저 여기서 한 번 재고 들어간다. */
-const measure = () =>
-  page.evaluate(() => {
+/**
+ * 화면에 보이는 글자를 잰다.
+ *
+ * 마우스를 구석으로 치우고 잰다. 마우스가 우연히 버튼 위에 있으면 그 버튼만
+ * :hover 색으로 재게 되어, 돌릴 때마다 결과가 달라졌다. 마우스를 올린 상태는
+ * hoverPass() 가 일부러 따로 잰다.
+ * @param {string|null} only 이 선택자에 맞는 요소만 잰다.
+ */
+const measure = async (only = null) => {
+  if (!only) await page.mouse.move(0, 0);
+  return page.evaluate((only) => {
     // 브라우저가 돌려주는 색 문자열은 한 가지가 아니다.
     //   rgb(35, 33, 30) / rgba(…, 0.5)      — 0~255 정수
     //   color(srgb 0.877 0.913 0.884)       — 0~1 실수. color-mix() 가 이렇게 나온다.
@@ -120,7 +134,7 @@ const measure = () =>
     const out = [];
     const seen = new Set();
 
-    for (const el of document.querySelectorAll('body *')) {
+    for (const el of document.querySelectorAll(only ?? 'body *')) {
       if (!visible(el)) continue;
       // 자기 자신이 직접 가진 글자만 본다 (자식 글자는 자식 차례에 잰다).
       const own = [...el.childNodes]
@@ -166,7 +180,45 @@ const measure = () =>
       }
     }
     return { findings: out, unknown: [...new Set(unknown)] };
+  }, only);
+};
+
+/**
+ * 마우스를 올린 상태. 지금 화면에 보이는 버튼 모양(클래스 조합)마다 하나씩 올려 본다.
+ * .btn:hover 가 더 구체적이라 변형 버튼(.btn-danger)의 배경을 회색으로 덮어 글자가
+ * 1.1:1 로 사라진 적이 있다. 우연히 걸린 것이라 이제 일부러 잰다.
+ */
+async function hoverPass(where) {
+  const kinds = await page.evaluate(() => {
+    const seen = new Map();
+    for (const el of document.querySelectorAll('button, a.btn, a.today-link, .choice, .node')) {
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height || el.disabled) continue;
+      const cs = getComputedStyle(el);
+      if (cs.visibility === 'hidden' || cs.display === 'none') continue;
+      const key = el.className;
+      if (!seen.has(key)) seen.set(key, el);
+    }
+    let i = 0;
+    for (const el of seen.values()) el.dataset.hoverProbe = String(i++);
+    return i;
   });
+  for (let i = 0; i < kinds; i++) {
+    const sel = `[data-hover-probe="${i}"]`;
+    try {
+      await page.hover(sel, { timeout: 1500 });
+    } catch {
+      continue; // 다른 것에 가려진 버튼 — 손이 닿지 않으니 잴 필요도 없다
+    }
+    const r = await measure(`${sel}, ${sel} *`);
+    add(`${where}(마우스 올림)`, r);
+    checked++;
+  }
+  await page.evaluate(() => {
+    for (const el of document.querySelectorAll('[data-hover-probe]')) delete el.dataset.hoverProbe;
+  });
+  await page.mouse.move(0, 0);
+}
 
 const findings = new Map();
 const unknownColors = new Set();
@@ -186,7 +238,8 @@ await page.fill('#signup-form [name=handle]', handle);
 await page.fill('#signup-form [name=displayName]', '한결');
 await page.fill('#signup-form [name=pin]', '1234');
 await page.click('#signup-form button[type=submit]');
-await page.waitForSelector('#mission-list .mission', { timeout: 15000 });
+// 미션은 이제 '오늘의 시' 화면에 있어 숨겨져 있다. 그려졌는지만 본다.
+await page.waitForSelector('#mission-list .mission', { state: 'attached', timeout: 15000 });
 
 // 처음 들어온 사람에게는 하루 목표를 묻는 화면이 지도 위를 덮는다.
 // 고르면 곧장 첫 마디가 열리므로 그것도 닫고 지도로 돌아온다.
@@ -250,6 +303,7 @@ for (const theme of THEMES) {
       await page.waitForTimeout(300);
       add(`${view}·${theme}·${accent}`, await measure());
       checked++;
+      await hoverPass(`${view}·${theme}`);
     }
   }
 }
@@ -369,10 +423,28 @@ for (const theme of THEMES) {
   await page.waitForTimeout(400);
 }
 
-// 채점된 선택지(정답·오답 색)도 재야 한다.
+// 계정 지우기 — 되돌릴 수 없는 버튼의 대비도 두 테마에서 잰다(누르지는 않는다).
+for (const theme of THEMES) {
+  await page.evaluate((t) => (document.documentElement.dataset.theme = t), theme);
+  await page.evaluate(() => {
+    location.hash = '#me';
+    dispatchEvent(new HashChangeEvent('hashchange'));
+  });
+  await page.waitForTimeout(500);
+  await page.click('#delete-account-btn');
+  await page.waitForSelector('#delete-dialog[open]');
+  const handle = await page.textContent('#delete-handle');
+  await page.fill('#delete-form [name=confirm]', handle);
+  add(`계정 지우기·${theme}`, await measure());
+  checked++;
+  await hoverPass(`계정 지우기·${theme}`);
+  await page.evaluate(() => document.querySelector('#delete-dialog').close());
+}
+
+// 채점된 선택지(정답·오답 색)도 재야 한다. 미션은 '오늘의 시' 화면에 있다.
 await page.evaluate(() => (document.documentElement.dataset.theme = 'light'));
 await page.evaluate(() => {
-  location.hash = '#path';
+  location.hash = '#today';
   dispatchEvent(new HashChangeEvent('hashchange'));
 });
 await page.waitForTimeout(400);

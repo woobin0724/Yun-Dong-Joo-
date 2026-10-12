@@ -118,7 +118,8 @@ await page.fill('#signup-form [name=handle]', handle);
 await page.fill('#signup-form [name=displayName]', '한결');
 await page.fill('#signup-form [name=pin]', '1234');
 await page.click('#signup-form button[type=submit]');
-await page.waitForSelector('#mission-list .mission', { timeout: 10000 });
+// 미션은 이제 '오늘의 시' 화면에 있어 숨겨져 있다. 그려졌는지만 본다.
+await page.waitForSelector('#mission-list .mission', { state: 'attached', timeout: 10000 });
 
 // 처음 들어온 사람에게는 하루 목표를 묻는 화면이 지도 위를 덮는다.
 // 고르면 곧장 첫 마디가 열리므로 그것도 닫고 지도로 돌아온다.
@@ -139,7 +140,14 @@ await page.waitForTimeout(300);
 await shot('04-today-night');
 await setTheme('light');
 
-// ── 미션 풀기 ──
+// ── 미션 풀기 ── 미션은 '오늘의 시' 화면에 있다.
+await page.evaluate(() => {
+  location.hash = '#today';
+  dispatchEvent(new HashChangeEvent('hashchange'));
+});
+await page.waitForTimeout(500);
+await shot('04a-today-poem');
+await collect('오늘의 시');
 const check = page.locator('[data-act="check"]').first();
 if (await check.count()) {
   await check.click();
