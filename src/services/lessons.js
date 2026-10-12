@@ -1,4 +1,5 @@
 import { makeRng, sample, shuffled } from '../lib/rng.js';
+import { hasFinalConsonant } from '../lib/korean.js';
 import { POEMS } from '../content/poems.js';
 import { findNode } from '../content/journey.js';
 
@@ -30,6 +31,7 @@ export const STEP_POINTS = {
   cloze: 15,
   order: 15,
   diction: 15,
+  repeat: 15,
   feeling: 10,
   response: 20,
 };
@@ -81,16 +83,24 @@ function buildSlowRead(poem) {
 }
 
 /** 빈칸 — 본문의 시어 하나를 지우고 네 보기에서 고른다. */
-function buildCloze(rng, poem) {
-  const candidates = wordsInBody(poem);
+export function buildCloze(rng, poem) {
+  // 낱말로서 나오는 행만 고른다. 글자열로 고르면 "내" 를 지울 때 "내일" 이
+  // "____일" 이 된다.
+  const candidates = wordsInBody(poem).filter((w) => countIn(poem, w) > 0);
   if (!candidates.length) return null;
 
   const word = candidates[Math.floor(rng() * candidates.length)];
   const lines = allLines(poem);
-  const hits = lines.filter((l) => l.includes(word));
+  const hits = lines.filter((l) => wordRe(word).test(l));
+  if (!hits.length) return null;
   const line = hits[Math.floor(rng() * hits.length)];
 
-  const wrong = sample(rng, foreignWords(poem), 3);
+  // 오답 보기는 정답과 받침 여부가 같은 말로만 고른다. 빈칸 뒤 조사가
+  // 답을 흘리기 때문이다 — "____를 건너서" 앞에는 받침 없는 말만 온다.
+  // 받침 있는 '언덕', '용궁' 을 보기로 두면 읽지 않고도 지울 수 있다.
+  const final = hasFinalConsonant(word);
+  const pool = foreignWords(poem).filter((w) => hasFinalConsonant(w) === final);
+  const wrong = sample(rng, pool, 3);
   if (wrong.length < 3) return null;
 
   const options = shuffled(rng, [word, ...wrong]);
@@ -98,14 +108,14 @@ function buildCloze(rng, poem) {
     type: 'cloze',
     points: STEP_POINTS.cloze,
     prompt: '빈칸에 들어갈 말을 고르세요.',
-    line: line.replaceAll(word, '____'),
+    line: line.replace(wordRe(word), (_, lead) => `${lead}____`),
     options,
     answer: options.indexOf(word),
   };
 }
 
 /** 행 순서 — 한 연의 행을 섞어 놓고 제자리로 돌린다. */
-function buildOrder(rng, poem) {
+export function buildOrder(rng, poem) {
   const usable = poem.stanzas.filter((st) => st.length >= 3 && st.length <= 5);
   if (!usable.length) return null;
 
@@ -127,7 +137,7 @@ function buildOrder(rng, poem) {
 }
 
 /** 시어 고르기 — 이 시에 없는 말을 찾는다. 본문을 읽어야만 풀린다. */
-function buildDiction(rng, poem) {
+export function buildDiction(rng, poem) {
   const mine = wordsInBody(poem);
   if (mine.length < 3) return null;
   const outsider = sample(rng, foreignWords(poem), 1)[0];
@@ -140,6 +150,76 @@ function buildDiction(rng, poem) {
     prompt: '이 시에 나오지 않는 말은 어느 것일까요?',
     options,
     answer: options.indexOf(outsider),
+  };
+}
+
+/**
+ * 낱말 뒤에 붙어도 같은 낱말로 치는 것들 — 조사. 길이가 긴 것부터 둔다.
+ * 글자열로만 세면 "내(시내)" 가 "내일" 안에서, "달" 이 "달려" 안에서 잡힌다.
+ * 실제로 「새로운 길」의 "내" 가 2번인데 3번으로 셌다.
+ */
+const PARTICLES = [
+  '으로', '에게', '한테', '처럼', '마다', '까지', '보다', '이여', '이다', '에서',
+  '을', '를', '이', '가', '은', '는', '에', '의', '도', '로', '과', '와', '만', '아', '야', '여',
+];
+const escapeRe = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * 본문에서 낱말이 몇 번 나오는지.
+ * 앞은 줄머리·띄어쓰기·문장부호, 뒤는 그것 또는 조사일 때만 센다.
+ * "별을" 은 별 하나, "별빛" 은 별이 아니다.
+ */
+const EDGE = `[\\s.,!?…·—\\-:;"'“”‘’「」『』()]`;
+
+/** 낱말 하나를 경계에서만 잡는 정규식. 앞 경계는 잡아 두었다가 되돌려 놓는다. */
+function wordRe(word) {
+  return new RegExp(
+    `(^|${EDGE})${escapeRe(word)}(?=$|${EDGE}|(?:${PARTICLES.join('|')})+(?:$|${EDGE}))`,
+    'gmu',
+  );
+}
+
+export function countIn(poem, word) {
+  return [...allLines(poem).join('\n').matchAll(wordRe(word))].length;
+}
+
+/**
+ * 되풀이 — 이 시에서 가장 여러 번 나오는 말.
+ * 정답이 해석이 아니라 **횟수**라서 출처 없이도 틀릴 수 없는 문항이다.
+ * 가장 많이 나오는 말이 하나로 정해지지 않으면(공동 1등) 만들지 않는다.
+ */
+/** 넉넉한 셈 — 글자열이 나오는 곳을 다 센다. 남의 낱말 안에 든 것까지. */
+function countLoose(poem, word) {
+  const body = allLines(poem).join('\n');
+  let n = 0;
+  for (let at = body.indexOf(word); at !== -1; at = body.indexOf(word, at + word.length)) n++;
+  return n;
+}
+
+export function buildRepeat(rng, poem) {
+  // 셈을 두 번 한다. 엄격한 셈(countIn)은 "햇빛인데" 처럼 조사 목록에 없는
+  // 꼬리가 붙으면 놓치고, 넉넉한 셈은 "내일" 안의 "내" 까지 센다. 한쪽만
+  // 믿으면 정답이 뒤집힐 수 있다. 두 셈이 **같은 낱말을 단독 1등으로**
+  // 가리킬 때만 문항을 만든다. 정답이 해석이 아니라 횟수인 문항이 틀리면
+  // 변명할 길이 없다.
+  const words = wordsInBody(poem);
+  if (words.length < 4) return null;
+  const strict = words.map((w) => ({ w, n: countIn(poem, w) })).sort((a, b) => b.n - a.n);
+  const loose = words.map((w) => ({ w, n: countLoose(poem, w) })).sort((a, b) => b.n - a.n);
+  const uniqueTop = (list) => (list[0].n >= 2 && list[0].n > list[1].n ? list[0].w : null);
+  const top = uniqueTop(strict);
+  if (!top || top !== uniqueTop(loose)) return null;
+  const counted = strict;
+
+  const others = sample(rng, counted.slice(1), 3).map((c) => c.w);
+  const options = shuffled(rng, [top, ...others]);
+  return {
+    type: 'repeat',
+    points: STEP_POINTS.repeat,
+    prompt: '이 시에서 가장 여러 번 되풀이되는 말은 어느 것일까요?',
+    options,
+    answer: options.indexOf(top),
+    counts: Object.fromEntries(counted.map((c) => [c.w, c.n])),
   };
 }
 
@@ -244,7 +324,8 @@ export function grade(step, submission) {
     }
 
     case 'cloze':
-    case 'diction': {
+    case 'diction':
+    case 'repeat': {
       const choice = submission?.choice;
       if (choice === null || choice === undefined || choice === '') {
         return { ok: false, correct: null, points: 0, reveal: null, message: '보기를 골라 주세요.' };

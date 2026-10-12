@@ -8,6 +8,7 @@ import {
 } from './core.js';
 import { mountJourney, loadJourney } from './journey.js';
 import { mountTranscribe, openTranscribe, layout } from './transcribe.js';
+import { mountExam, loadExamCard } from './exam.js';
 
 const challengeToast = (c) =>
   toast(`${c.title} — ${c.description}`, { tone: 'star', iconName: 'star', ms: 5000 });
@@ -215,6 +216,10 @@ async function enterApp(user) {
   $('#gate').hidden = true;
   $('#app').hidden = false;
   mountJourney({ onPoints: refreshPills, onTranscribe: openTranscribe });
+  mountExam({ onPoints: refreshPills });
+  addEventListener('journey:changed', () => {
+    if (document.body.dataset.view === 'path') loadExamCard();
+  });
   mountTranscribe({ onSave: () => { refreshPills(); if (document.body.dataset.view === 'me') loadMe(); } });
   await Promise.all([loadToday(), loadJourney(), loadRooms()]);
   switchView(location.hash.slice(1) || 'path');
@@ -233,7 +238,10 @@ function switchView(name) {
   }
   if (location.hash.slice(1) !== target) history.replaceState(null, '', `#${target}`);
 
-  if (target === 'path') loadJourney();
+  if (target === 'path') {
+    loadJourney();
+    loadExamCard();
+  }
   if (target === 'library') loadLibrary();
   if (target === 'room') renderRoomView();
   if (target === 'ranking') loadRanking();

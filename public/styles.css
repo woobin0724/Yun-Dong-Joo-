@@ -1611,3 +1611,30 @@ details.chapter > .node-list { margin-top: var(--sp-3); }
   padding-bottom: var(--sp-4);
 }
 #tr-work .step-peek .poem-body .line { line-height: 1.8; }
+
+/* ═══════════════ 시험 대비 ═══════════════ */
+.exam-card {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  margin-top: var(--sp-6);
+  padding: var(--sp-4) var(--sp-5);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.exam-card-text { flex: 1; }
+.exam-card h3 { font-size: var(--text-base); margin-bottom: 2px; }
+.exam-card p { margin: 0; font-size: var(--text-sm); color: var(--ink-soft); line-height: 1.7; }
+.exam-source { margin: 0; display: flex; align-items: center; gap: var(--sp-2); font-family: var(--font-poem); font-size: var(--text-sm); color: var(--ink-mute); }
+.exam-tag {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  padding: 2px var(--sp-2);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-pill);
+  color: var(--accent-ink);
+}
+.exam-ledger { width: 100%; max-width: 20rem; margin: 0; padding: 0; list-style: none; display: grid; gap: var(--sp-2); }
+.exam-ledger li { display: flex; justify-content: space-between; padding: var(--sp-3) 0; border-bottom: 1px solid var(--line); font-size: var(--text-sm); }
+.exam-ledger b { font-variant-numeric: tabular-nums; }

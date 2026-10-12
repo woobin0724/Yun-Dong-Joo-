@@ -231,6 +231,8 @@
       <div id="mission-list" class="mission-list"></div>
       <div id="today-done" class="day-done" hidden></div>
 
+      <section id="exam-card" class="exam-card" hidden aria-label="시험 대비"></section>
+
       <div class="section-head"><h2>지도</h2></div>
       <p id="chapter-note" class="note"></p>
       <p id="path-unverified" class="notice" hidden></p>
@@ -424,6 +426,24 @@
       <button id="tr-export" class="btn" type="button">그림으로</button>
       <button id="tr-save" class="btn btn-primary" type="button" disabled>저장</button>
     </div>
+  </footer>
+</section>
+
+<!-- ══════════════ 시험 대비 ══════════════ -->
+<section id="exam" class="lesson" hidden aria-label="시험 대비">
+  <header class="lesson-bar">
+    <button class="icon-btn" id="exam-close" type="button" aria-label="시험 닫기">
+      <svg class="icon" aria-hidden="true"><use href="#i-x" /></svg>
+    </button>
+    <div class="lesson-bar-mid">
+      <div id="exam-meter" class="meter" role="progressbar" aria-label="시험 진행"><i></i></div>
+    </div>
+    <span id="exam-count" class="lesson-count"></span>
+  </header>
+  <div id="exam-body" class="lesson-body"></div>
+  <footer class="lesson-foot">
+    <p id="exam-feedback" class="lesson-feedback" role="status" hidden></p>
+    <button id="exam-next" class="btn btn-primary btn-block btn-lg" type="button">확인</button>
   </footer>
 </section>
 

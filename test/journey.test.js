@@ -435,3 +435,37 @@ test('분포의 비율 합은 늘 100%에 수렴한다', async () => {
   const sum = dist.items.reduce((s, i) => s + i.percent, 0);
   assert.ok(Math.abs(sum - 100) <= 2, `비율 합이 ${sum}% 입니다`);
 });
+
+test('빈칸 오답 보기는 정답과 받침 여부가 같다 — 조사가 답을 흘리지 않게', async () => {
+  const { hasFinalConsonant } = await import('../src/lib/korean.js');
+  let checked = 0;
+  for (const node of NODES) {
+    for (const uid of [1, 2, 3, 4, 5, 6]) {
+      const step = buildLesson(uid, node.id).steps.find((s) => s.type === 'cloze');
+      if (!step) continue;
+      const want = hasFinalConsonant(step.options[step.answer]);
+      for (const opt of step.options) {
+        assert.equal(hasFinalConsonant(opt), want, `${node.id}: "${opt}" 는 빈칸 뒤 조사와 맞지 않습니다 — ${step.line}`);
+      }
+      checked++;
+    }
+  }
+  assert.ok(checked > 10, '빈칸 문항이 너무 적게 만들어졌습니다');
+});
+
+test('빈칸은 낱말 자리만 지운다 — "내일" 안의 "내" 는 지우지 않는다', async () => {
+  const { POEMS } = await import('../src/content/poems.js');
+  const { buildCloze } = await import('../src/services/lessons.js');
+  const { makeRng } = await import('../src/lib/rng.js');
+  for (const poem of POEMS) {
+    for (let seed = 0; seed < 12; seed++) {
+      const step = buildCloze(makeRng(`c${seed}`), poem);
+      if (!step) continue;
+      // 빈칸 바로 뒤에 한글이 붙어 있으면 조사여야 한다.
+      for (const m of step.line.matchAll(/____([가-힣]+)/g)) {
+        assert.match(m[1], /^(을|를|이|가|은|는|에|의|도|로|으로|과|와|만|에서|에게|까지|처럼|마다|보다|이여|아|야|여)/,
+          `「${poem.title}」: 낱말 중간이 지워졌습니다 — ${step.line}`);
+      }
+    }
+  }
+});

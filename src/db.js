@@ -281,6 +281,39 @@ const MIGRATIONS = [
       CREATE INDEX idx_transcriptions_user ON transcriptions(user_id, created_at DESC);
     `,
   },
+  {
+    name: '006-exam',
+    sql: `
+      -- 오답 노트. 틀린 문제를 문제 그대로(답 포함) 서버에 둔다.
+      -- 브라우저로는 답을 뗀 모양만 나간다. 같은 자리에서 두 번 틀려도 한 줄.
+      CREATE TABLE mistakes (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        poem_id     TEXT NOT NULL,
+        origin      TEXT NOT NULL,          -- 'lesson:<node>:<i>' | 'exam:<id>:<i>'
+        step        TEXT NOT NULL,          -- JSON, 답 포함
+        created_at  TEXT NOT NULL,
+        resolved_at TEXT,
+        UNIQUE (user_id, origin)
+      );
+      CREATE INDEX idx_mistakes_open ON mistakes(user_id, resolved_at);
+
+      -- 시험 한 번. 문항은 답과 함께 서버에 얼려 둔다. 새로고침해도 같은 시험이다.
+      CREATE TABLE exam_sessions (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        items       TEXT NOT NULL,          -- JSON [{step, poemId, mistakeId?}]
+        created_at  TEXT NOT NULL,
+        finished_at TEXT
+      );
+      CREATE TABLE exam_answers (
+        exam_id  INTEGER NOT NULL REFERENCES exam_sessions(id) ON DELETE CASCADE,
+        idx      INTEGER NOT NULL,
+        correct  INTEGER NOT NULL,
+        PRIMARY KEY (exam_id, idx)
+      );
+    `,
+  },
 ];
 
 function applyMigrations(database) {

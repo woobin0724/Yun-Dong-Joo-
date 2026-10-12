@@ -300,6 +300,40 @@ for (const theme of THEMES) {
   await page.waitForTimeout(300);
 }
 
+
+// ── 시험 대비 ──
+// 위에서 레슨을 끝냈으므로 시험이 열려 있어야 한다. 열리지 않으면 그것도 문제다.
+for (const theme of THEMES) {
+  await page.evaluate((t) => (document.documentElement.dataset.theme = t), theme);
+  await page.evaluate(() => {
+    location.hash = '#path';
+    dispatchEvent(new HashChangeEvent('hashchange'));
+  });
+  await page.waitForSelector('#exam-start', { timeout: 10000 });
+  await page.click('#exam-start');
+  await page.waitForSelector('#exam:not([hidden])');
+  await page.waitForTimeout(300);
+  const en = page.locator('#exam-next');
+  for (let i = 0; i < 12; i++) {
+    if ((await en.getAttribute('data-mode')) === 'done') break;
+    add(`시험·${theme}`, await measure());
+    checked++;
+    if (await page.locator('#exam-body .choice').count()) {
+      await page.locator('#exam-body .choice').nth(i % 4).click();
+    }
+    await en.click();
+    await page.waitForTimeout(450);
+    add(`시험 결과·${theme}`, await measure());
+    checked++;
+    await en.click();
+    await page.waitForTimeout(300);
+  }
+  add(`시험 마무리·${theme}`, await measure());
+  checked++;
+  await page.evaluate(() => document.querySelector('#exam-close')?.click());
+  await page.waitForTimeout(400);
+}
+
 // 채점된 선택지(정답·오답 색)도 재야 한다.
 await page.evaluate(() => (document.documentElement.dataset.theme = 'light'));
 await page.evaluate(() => {

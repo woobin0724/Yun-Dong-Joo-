@@ -240,6 +240,29 @@ if ((await cta.count()) && (await cta.isVisible())) {
 }
 
 
+// ── 시험 대비 ──
+await page.evaluate(() => {
+  location.hash = '#path';
+  dispatchEvent(new HashChangeEvent('hashchange'));
+});
+await page.waitForTimeout(500);
+if (await page.locator('#exam-start').count()) {
+  await page.click('#exam-start');
+  await page.waitForSelector('#exam:not([hidden])');
+  await page.waitForTimeout(300);
+  await shot('20-exam', false);
+  await collect('시험 대비');
+  const en = page.locator('#exam-next');
+  if (await page.locator('#exam-body .choice').count()) await page.locator('#exam-body .choice').first().click();
+  await en.click();
+  await page.waitForTimeout(450);
+  await collect('시험 채점');
+  await page.evaluate(() => document.querySelector('#exam-close')?.click());
+  await page.waitForTimeout(400);
+} else {
+  allIssues.add('[시험 대비] 레슨을 끝냈는데 시험이 열리지 않습니다');
+}
+
 // ── 원고지 필사 ──
 // 덮는 화면이라 탭 순회에 잡히지 않는다. 시집에서 열어 몇 줄 적어 본다.
 await page.evaluate(() => {

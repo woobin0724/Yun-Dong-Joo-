@@ -14,6 +14,7 @@ import { rankingRouter } from './routes/ranking.js';
 import { meRouter } from './routes/me.js';
 import { journeyRouter } from './routes/journey.js';
 import { transcriptionsRouter } from './routes/transcriptions.js';
+import { examRouter } from './routes/exam.js';
 import { isPushConfigured } from './services/push.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -47,6 +48,7 @@ export function createApp() {
   app.use('/api/me', meRouter);
   app.use('/api/journey', journeyRouter);
   app.use('/api/transcriptions', transcriptionsRouter);
+  app.use('/api/exam', examRouter);
 
   // 조사 고르기는 서버와 화면이 같은 규칙을 써야 합니다. 복사해 두면 언젠가
   // 한쪽만 고쳐져 「서시」을 같은 글이 화면에만 남습니다. 파일 하나를 그대로

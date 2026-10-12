@@ -10,6 +10,7 @@ import {
   nodesOfChapter,
 } from '../content/journey.js';
 import { buildLesson, grade, toClient } from './lessons.js';
+import { recordMistake } from './exam.js';
 
 /**
  * 「동주의 길」 — 지도와 걸음.
@@ -196,6 +197,11 @@ export function submitStep(userId, nodeId, stepIndex, submission) {
         `INSERT INTO responses (user_id, node_id, poem_id, text, created_at) VALUES (?, ?, ?, ?, ?)
          ON CONFLICT (user_id, node_id) DO UPDATE SET text = excluded.text`,
       ).run(userId, nodeId, node.poemId, String(submission.text).trim(), now());
+    }
+
+    // 틀린 문제는 오답 노트로. 시험 대비가 여기서부터 시작한다.
+    if (isNew && result.correct === false) {
+      recordMistake(db, { userId, poemId: node.poemId, origin: `lesson:${nodeId}:${stepIndex}`, step });
     }
 
     if (isNew) {

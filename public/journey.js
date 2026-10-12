@@ -177,6 +177,9 @@ function closeLesson() {
   state.lesson = null;
   state.stepState = null;
   loadJourney();
+  // 걸은 뒤에 바뀌어야 할 것(시험 대비 칸, 「나」…)을 이 모듈이 다 알 수는 없습니다.
+  // 알림만 내보내고 듣는 쪽이 알아서 다시 그립니다.
+  dispatchEvent(new CustomEvent('journey:changed'));
 }
 
 function renderStep() {
