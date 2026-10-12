@@ -22,7 +22,9 @@ import { chromium } from 'playwright';
 const BASE = process.argv[2] || 'http://127.0.0.1:3000';
 const VIEWS = ['today', 'library', 'room', 'ranking', 'me'];
 const THEMES = ['light', 'dark'];
-const ACCENTS = ['blue', 'red'];
+// 인주 레드는 고르지 않은 안이라 배포 CSS 에 없습니다. 재 봐야 블루와
+// 같은 값이 나오므로 빼둡니다. 포인트 색을 다시 고르면 여기도 늘립니다.
+const ACCENTS = ['blue'];
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
 const ctx = await browser.newContext({

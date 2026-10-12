@@ -222,6 +222,49 @@ const MIGRATIONS = [
       CREATE INDEX idx_identities_user ON auth_identities(user_id);
     `,
   },
+  {
+    name: '004-journey',
+    sql: `
+      -- 마디 하나를 걸은 기록. 어디까지 왔는지와 몇 점을 받았는지.
+      -- 장과 마디 자체는 코드(content/journey.js)에 있으므로 표로 두지 않는다.
+      -- 콘텐츠가 바뀌면 DB 마이그레이션이 아니라 파일 수정으로 끝나야 한다.
+      CREATE TABLE node_progress (
+        user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        node_id     TEXT NOT NULL,
+        steps_done  INTEGER NOT NULL DEFAULT 0,
+        score       INTEGER NOT NULL DEFAULT 0,
+        started_at  TEXT NOT NULL,
+        done_at     TEXT,
+        PRIMARY KEY (user_id, node_id)
+      );
+      CREATE INDEX idx_node_progress_user ON node_progress(user_id);
+
+      -- '화자의 마음' 은 채점하지 않는다. 대신 다른 사람들이 어디를 짚었는지
+      -- 보여 주려고 고른 것을 모은다. 한 사람이 한 마디에 하나만 가진다.
+      CREATE TABLE feeling_votes (
+        user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        node_id    TEXT NOT NULL,
+        choice     TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (user_id, node_id)
+      );
+      CREATE INDEX idx_feeling_node ON feeling_votes(node_id);
+
+      -- 한 줄 감상. 사라지지 않고 남아서 나중에 '걸어온 길' 과 필사 갤러리의
+      -- 재료가 된다. 이전 구조에서는 쓴 글이 채팅으로 흘러가 버리고
+      -- 다시 찾을 수 없었다.
+      CREATE TABLE responses (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        node_id    TEXT NOT NULL,
+        poem_id    TEXT NOT NULL,
+        text       TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        UNIQUE (user_id, node_id)
+      );
+      CREATE INDEX idx_responses_user ON responses(user_id, created_at);
+    `,
+  },
 ];
 
 function applyMigrations(database) {

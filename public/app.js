@@ -749,7 +749,10 @@ async function loadMe() {
   ]);
 
   const s = me.stats;
-  $('#me-head').innerHTML = `${mascot(s.streak > 0 ? 'happy' : 'default')}
+  // 표식은 여기에 두지 않습니다. 첫 화면 대기와 하루 완료에서는 표식이
+  // 할 일이 있지만(기다리는 동안 볼 것, 끝냈다는 표시), 이 줄에서는 이름
+  // 옆에 아무 일도 하지 않는 그림이 하나 붙을 뿐이었습니다.
+  $('#me-head').innerHTML = `
     <div>
       <div class="me-name">${esc(me.user.displayName)}</div>
       <div class="me-sub">${esc(me.user.handle)}</div>

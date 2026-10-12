@@ -12,6 +12,7 @@ import { missionsRouter } from './routes/missions.js';
 import { roomsRouter } from './routes/rooms.js';
 import { rankingRouter } from './routes/ranking.js';
 import { meRouter } from './routes/me.js';
+import { journeyRouter } from './routes/journey.js';
 import { isPushConfigured } from './services/push.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -43,6 +44,7 @@ export function createApp() {
   app.use('/api/rooms', roomsRouter);
   app.use('/api/ranking', rankingRouter);
   app.use('/api/me', meRouter);
+  app.use('/api/journey', journeyRouter);
 
   app.use(
     express.static(publicDir, {

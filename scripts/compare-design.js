@@ -65,6 +65,25 @@ async function render({ file, view, accent = 'blue', theme = 'light', font = nul
       root.dataset.accent = accent;
       root.dataset.theme = theme;
 
+      // 인주 레드는 고르지 않은 안이라 배포 CSS 에 없습니다. 비교할 때만
+      // 여기서 넣습니다. 쓰지 않는 색을 모든 사용자에게 보내지 않으려고요.
+      if (!document.getElementById('cmp-accent')) {
+        const st = document.createElement('style');
+        st.id = 'cmp-accent';
+        st.textContent = `
+          :root[data-accent='red'] {
+            --accent: #a8261c; --accent-ink: #a8261c; --accent-deep: #71170f;
+            --accent-soft: #a8261c14; --accent-line: #a8261c59;
+            --on-accent: #ffffff; --rule-accent: #a8261c40;
+          }
+          :root[data-theme='dark'][data-accent='red'] {
+            --accent: #f5a79d; --accent-ink: #f5a79d; --accent-deep: #b06f66;
+            --accent-soft: #f5a79d1f; --accent-line: #f5a79d59;
+            --on-accent: #141310; --rule-accent: #f5a79d40;
+          }`;
+        document.head.append(st);
+      }
+
       if (needsCss && !document.getElementById('cmp-css')) {
         const link = document.createElement('link');
         link.id = 'cmp-css';
