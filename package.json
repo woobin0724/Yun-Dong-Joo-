@@ -21,7 +21,8 @@
     "verify:google": "node scripts/verify-google-login.js",
     "design:check": "impeccable detect public/",
     "content:check": "node scripts/check-content.js",
-    "design:compare": "node scripts/compare-design.js"
+    "design:compare": "node scripts/compare-design.js",
+    "e2e": "node scripts/screenshot.js screenshots/shots"
   },
   "dependencies": {
     "express": "^5.1.0",
