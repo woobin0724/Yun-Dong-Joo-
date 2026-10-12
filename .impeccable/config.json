@@ -1,28 +1,8 @@
 {
   "detector": {
-    "ignoreRules": [
-      "repeating-stripes-gradient"
-    ],
+    "ignoreRules": [],
     "ignoreFiles": [],
-    "ignoreValues": [
-      {
-        "rule": "cream-palette",
-        "value": "*",
-        "files": [
-          "public/styles.css"
-        ],
-        "createdAt": "2026-09-21T04:49:19.208Z",
-        "reason": "한지(韓紙) — 이 앱이 고른 재료입니다. 윤동주의 시를 원고지 위에서 읽는 것이 디자인의 전제이고, 밝은 화면의 바탕은 그 종이색입니다. 무난해서 고른 오프화이트가 아닙니다."
-      },
-      {
-        "rule": "cream-palette",
-        "value": "*",
-        "files": [
-          "public/index.html"
-        ],
-        "createdAt": "2026-09-21T04:49:19.272Z",
-        "reason": "위와 같음 — 한지 바탕"
-      }
-    ]
+    "ignoreValues": [],
+    "_note": "무시 규칙이 하나도 없습니다. 전에는 두 개를 두고 있었는데 둘 다 필요가 없었습니다.\n  cream-palette — 덮는 대신 종이색을 #f4efe3 에서 #f1f1ec 로 옮겨 지적 자체를 없앴습니다.\n    원고지의 실제 색을 출처로 확인하지 못해서, '이건 한지라서 예외' 라는 사실 주장으로\n    변명할 수 없었습니다.\n  repeating-stripes-gradient — 전역으로 꺼 두고 있었는데, 확인해 보니 이 규칙은\n    실패가 아니라 advisory 라 애초에 끌 필요가 없었습니다. 그대로 뜨게 둡니다.\n    원고지 세로 괘선은 장식 줄무늬가 아니라 종이에 인쇄된 선이라고 판단해 유지하지만,\n    그 판단이 맞는지 매번 다시 보라고 경고를 남겨 둡니다."
   }
 }

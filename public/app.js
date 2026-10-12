@@ -78,7 +78,7 @@ const state = {
 function currentTheme() {
   return (
     document.documentElement.dataset.theme ||
-    (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+    (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
   );
 }
 
@@ -347,10 +347,23 @@ function readingNoteHtml(poem) {
   }<div class="tag-row">${tags}</div>`;
 }
 
+/**
+ * 창작 시기를 사람이 읽는 꼴로 바꿉니다.
+ *
+ * 달력에 없는 날짜(예: 9월 31일)는 날짜를 떼고 연·월까지만 보여 줍니다.
+ * 시 본문과 창작 시기는 아직 정본 대조 전이라, 확인되지 않은 값을
+ * 사실인 것처럼 내보내지 않기 위해서입니다.
+ * 어떤 항목이 이에 해당하는지는 `npm run content:check` 가 알려 줍니다.
+ */
 function formatWritten(written) {
-  const [y, m, d] = String(written).split('-');
-  if (d) return `${y}년 ${Number(m)}월 ${Number(d)}일`;
-  if (m) return `${y}년 ${Number(m)}월`;
+  const [y, m, d] = String(written).split('-').map(Number);
+  if (d) {
+    const probe = new Date(Date.UTC(y, m - 1, d));
+    const real = probe.getUTCFullYear() === y && probe.getUTCMonth() === m - 1 && probe.getUTCDate() === d;
+    if (real) return `${y}년 ${m}월 ${d}일`;
+    return `${y}년 ${m}월`; // 날짜가 달력에 없습니다 — 확인 전까지 숨깁니다
+  }
+  if (m) return `${y}년 ${m}월`;
   return `${y}년`;
 }
 
@@ -426,7 +439,7 @@ function bindMissions() {
       input.addEventListener('input', () => {
         const length = [...input.value.trim()].length;
         counter.textContent = `${length} / ${min}자`;
-        counter.style.color = length >= min ? 'var(--leaf)' : '';
+        counter.style.color = length >= min ? 'var(--ok)' : '';
       });
     }
 

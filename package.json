@@ -19,7 +19,9 @@
     "fonts": "node scripts/fetch-fonts.js",
     "fake-google": "node scripts/fake-google-server.js",
     "verify:google": "node scripts/verify-google-login.js",
-    "design:check": "impeccable detect public/"
+    "design:check": "impeccable detect public/",
+    "content:check": "node scripts/check-content.js",
+    "design:compare": "node scripts/compare-design.js"
   },
   "dependencies": {
     "express": "^5.1.0",

@@ -24,7 +24,7 @@ const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PAT
 const ctx = await browser.newContext({
   viewport: { width: 360, height: 780 }, // 가장 좁은 흔한 폰 기준
   deviceScaleFactor: 2,
-  colorScheme: 'dark',
+  colorScheme: 'light',
   locale: 'ko-KR',
 });
 const page = await ctx.newPage();
@@ -43,14 +43,24 @@ const audit = () =>
     const issues = [];
     const visible = (el) => el.offsetParent !== null || el.getClientRects().length > 0;
 
-    for (const el of document.querySelectorAll('button, a[href], select, input, textarea')) {
+    // WCAG 2.5.5 는 44×44 를 요구한다. 이전 판은 가로를 24px 로 재고 있어서
+    // 사실상 세로만 검사했다. 글 속에 섞인 링크는 가로를 줄일 수 없으므로
+    // 거기만 세로를 본다.
+    for (const el of document.querySelectorAll('button, select, input, textarea')) {
       if (!visible(el)) continue;
       const r = el.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0 && (r.height < 44 || r.width < 24)) {
+      if (r.width > 0 && r.height > 0 && (r.height < 44 || r.width < 44)) {
         issues.push(
-          `터치영역 ${Math.round(r.width)}×${Math.round(r.height)} — ` +
+          `터치영역 ${Math.round(r.width)}×${Math.round(r.height)} (44×44 필요) — ` +
             `${el.tagName.toLowerCase()}.${el.className} "${(el.textContent || '').trim().slice(0, 14)}"`,
         );
+      }
+    }
+    for (const el of document.querySelectorAll('a[href]')) {
+      if (!visible(el)) continue;
+      const r = el.getBoundingClientRect();
+      if (r.height > 0 && r.height < 24) {
+        issues.push(`링크 높이 ${Math.round(r.height)}px — a "${(el.textContent || '').trim().slice(0, 14)}"`);
       }
     }
     for (const el of document.querySelectorAll('button')) {
@@ -93,13 +103,13 @@ await page.unroute('**/api/auth/me');
 await page.goto(BASE, { waitUntil: 'networkidle' });
 await page.waitForSelector('#gate:not([hidden])');
 await page.waitForTimeout(500);
-await shot('01-login-dark');
+await shot('01-login-paper');
 await collect('로그인');
 
-await setTheme('light');
-await page.waitForTimeout(300);
-await shot('02-login-light');
 await setTheme('dark');
+await page.waitForTimeout(300);
+await shot('02-login-night');
+await setTheme('light');
 
 // ── 가입 ──
 const handle = 'u' + Date.now().toString(36);
@@ -110,13 +120,13 @@ await page.fill('#signup-form [name=pin]', '1234');
 await page.click('#signup-form button[type=submit]');
 await page.waitForSelector('#mission-list .mission', { timeout: 10000 });
 await page.waitForTimeout(700);
-await shot('03-today-dark');
+await shot('03-today-paper');
 await collect('오늘');
 
-await setTheme('light');
-await page.waitForTimeout(300);
-await shot('04-today-light');
 await setTheme('dark');
+await page.waitForTimeout(300);
+await shot('04-today-night');
+await setTheme('light');
 
 // ── 미션 풀기 ──
 const check = page.locator('[data-act="check"]').first();
@@ -165,16 +175,16 @@ await collect('랭킹');
 await page.click('.tab[data-view="me"]');
 await page.waitForSelector('.challenge');
 await page.waitForTimeout(500);
-await shot('10-me-dark');
+await shot('10-me-paper');
 await collect('나');
-await setTheme('light');
+await setTheme('dark');
 await page.waitForTimeout(300);
-await shot('11-me-light');
+await shot('11-me-night');
 
 // ── 데스크톱 폭에서 한 바퀴 더 ──
 // 모바일만 고치고 넓은 화면을 방치하는 일이 흔하다.
 await page.setViewportSize({ width: 1280, height: 900 });
-await setTheme('dark');
+await setTheme('light');
 for (const [view, name] of [
   ['today', '12-today-wide'],
   ['room', '13-room-wide'],

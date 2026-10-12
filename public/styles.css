@@ -1,13 +1,36 @@
-@import url('/fonts/fonts.css');
+/* 글꼴은 index.html 에서 <link> 로 따로 받습니다.
+   여기에 @import 를 두면 브라우저가 이 파일을 다 받고 파싱한 뒤에야
+   글꼴 CSS 를 시작합니다. 측정값으로 1,996ms 를 그냥 기다렸습니다. */
 
 /* ═══════════════════════════════════════════════════════════
    별 헤는 밤 — 디자인 토큰
-   컨셉: 윤동주의 밤하늘과 원고지
+   ─────────────────────────────────────────────────────────
+   컨셉: 두 얼굴.
+
+   같은 앱이지만 하는 일이 둘입니다. 그래서 얼굴도 둘입니다.
+
+     배우는 얼굴 (지도·레슨·결과)
+       손에 잡히는 느낌. 버튼은 두툼하고 아래쪽에 두께가 보이며
+       누르면 그만큼 내려갑니다. 터치 영역은 넉넉하고, 어디까지
+       왔는지가 늘 보입니다. 정답에는 짧고 분명한 반응이 있습니다.
+
+     읽는 얼굴 (시 본문·필사)
+       문학책처럼 조용함. 종이와 괘선, 명조, 넓은 여백.
+       버튼의 두께도 모션도 여기서는 사라집니다. 움직이는 것은
+       글자를 읽는 눈뿐입니다.
+
+   두 얼굴은 색을 공유합니다. 다른 것은 두께(--lift), 모서리(--r-btn),
+   시간(--dur) 세 가지뿐입니다. .face-read 를 붙인 자리에서 세 값이
+   함께 가라앉습니다.
    ─────────────────────────────────────────────────────────
    색은 세 갈래만 씁니다.
-     밤(ink)   — 깊은 남색. 어두운 화면의 바탕이자 밝은 화면의 글자색.
-     한지(paper) — 따뜻한 미색. 밝은 화면의 바탕이자 어두운 화면의 글자색.
-     별빛(star) — 포인트 한 색. 두 모드에서 밝기를 달리 잡습니다.
+     종이(bg/surface) — 바탕. 기본은 밝은 종이, 다크는 '밤의 원고지'.
+     먹(ink)          — 글자. 순흑이 아니라 따뜻한 검정.
+     포인트(accent)   — 한 색. 만년필 잉크 블루가 기본이고,
+                        [data-accent='red'] 로 인주 레드로 바뀝니다.
+   그라데이션은 원고지 괘선(실제로 인쇄된 선)과 지도 배경에만 씁니다.
+   정답/오답의 --ok, --alert 는 장식이 아니라 기능색입니다.
+   색만으로 뜻을 전하지 않도록 늘 아이콘과 글과 함께 씁니다.
    ═══════════════════════════════════════════════════════════ */
 
 :root {
@@ -16,10 +39,7 @@
   --sp-5: 20px;  --sp-6: 24px;  --sp-8: 32px;  --sp-10: 40px;
   --sp-12: 48px; --sp-16: 64px;
 
-  /* ── 글자 크기 ──
-     12 / 14 / 16 / 18 / 22 / 28 / 36.
-     이전 눈금은 12와 13이 1px 차이라 서로 다른 일을 맡을 수 없었고
-     본문이 15px 이라 읽기 바닥(16px)에 못 미쳤습니다. */
+  /* ── 글자 크기 ── 12 / 14 / 16 / 18 / 22 / 28 / 36 */
   --text-xs:   0.75rem;    /* 12 — 아주 작은 딱지 */
   --text-sm:   0.875rem;   /* 14 — 보조·메타 */
   --text-base: 1rem;       /* 16 — 본문 */
@@ -28,129 +48,196 @@
   --text-2xl:  1.75rem;    /* 28 — 시 제목 */
   --text-3xl:  2.25rem;    /* 36 — 앱 이름 */
 
-  /* ── 행간·자간 ──
-     어두운 바탕의 흰 글자는 같은 값이어도 더 빽빽해 보입니다.
-     아래 테마 블록에서 조금씩 풀어 줍니다. */
+  /* 시 본문은 좁은 화면에서 시행이 접히지 않도록 뷰포트를 따라갑니다.
+     바닥값도 토큰이어야 큰 글씨 설정이 시 본문까지 닿습니다.
+     (이전에는 바닥이 1rem 으로 고정이라 360px 에서 설정이 무효였습니다.) */
+  --poem-min: 1rem;
+  --poem-size: clamp(var(--poem-min), 4.3vw, var(--text-lg));
+
+  /* ── 행간·자간 ── */
   --leading-body: 1.7;
   --leading-tight: 1.45;
   --tracking-body: 0;
 
-  /* ── 모서리 ── */
+  /* ── 모서리 ──
+     --r-btn 은 얼굴에 따라 바뀝니다. 배우는 얼굴에서는 두툼하게,
+     읽는 얼굴에서는 종이에 인쇄된 것처럼 거의 각지게. */
   --r-sm: 8px;  --r-md: 12px;  --r-lg: 18px;  --r-pill: 999px;
+  --r-btn: 14px;
 
   /* ── 글꼴 ──
      시는 명조, 앱의 뼈대는 산세리프. 역할이 다르니 얼굴도 다릅니다.
      둘 다 자체 호스팅이라 어느 기기에서나 같은 화면이 나오고,
-     외부 CDN 이 막혀도 오프라인에서도 제 모습입니다.
-
-     UI 를 시스템 글꼴로 두면 Windows 는 맑은 고딕, iOS 는 Apple SD Gothic Neo,
-     Android 는 Noto 로 갈라져 사실상 세 개의 다른 앱이 됩니다.
-     그렇다고 Noto Sans KR 을 집으면 누구나 반사적으로 고르는 그 선택이 됩니다. */
+     외부 CDN 이 막혀도 오프라인에서도 제 모습입니다. */
   --font-poem: 'Gowun Batang', 'Nanum Myeongjo', serif;
   --font-ui: 'IBM Plex Sans KR', -apple-system, BlinkMacSystemFont, system-ui,
              'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
 
   /* ── 크기 ── */
-  --topbar-h: calc(var(--tap) + var(--sp-4) + 1px);
-  --tabbar-h: 58px;
   --tap: 44px;              /* 최소 터치 영역 */
   --measure: 34rem;         /* 본문 최대 폭 */
+  --topbar-h: calc(var(--tap) + var(--sp-4) + 1px);
+  /* 탭바는 아이콘 22px + 글자 한 줄 + 위아래 여백입니다.
+     고정 58px 로 두면 큰 글씨 설정에서 글자가 잘립니다. */
+  --tabbar-h: calc(22px + var(--text-xs) * 1.4 + var(--sp-4));
 
-  /* ── 모션 ── */
+  /* ── 두께와 시간 — 두 얼굴을 가르는 값 ── */
+  --lift: 4px;              /* 버튼 아래 두께 */
   --ease: cubic-bezier(0.2, 0.8, 0.3, 1);
-  --dur: 220ms;
+  --dur: 180ms;
 }
 
-/* ═══ 밤 (기본) ═══ */
+/* 읽는 얼굴. 화면 전체(body[data-face='read'])에도, 한 덩어리에도 붙습니다. */
+.face-read,
+[data-face='read'],
+.manuscript {
+  --lift: 0px;
+  --dur: 1ms;
+  --r-btn: var(--r-sm);
+}
+
+/* ═══ 종이 (기본) ═══ */
 :root,
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  /* 따뜻한 미색(#f4efe3)에서 거의 중성인 종이로 옮겼습니다.
+     원고지의 실제 색은 출처로 확인하지 못했으므로 '원고지가 이런 색이다'
+     라는 근거를 대지 않습니다. 옮긴 이유는 눈으로 본 것입니다 —
+     따뜻한 미색은 화면 전체를 세피아 쪽으로 끌어당겨 앱이 '빈티지 감성'
+     처럼 보였습니다. 1945년에 죽은 사람을 다루면서 가장 피해야 할 톤입니다.
+     순백은 아니라서 여전히 종이로 읽히고, 포인트 색도 더 또렷해집니다. */
+  --bg:          #f1f1ec;   /* 책상에 깔린 종이 */
+  --bg-veil:     #f1f1ecf2; /* 상단바용 반투명 */
+  --surface:     #fafaf6;   /* 그 위에 놓인 한 장 */
+  --surface-2:   #e3e3dc;   /* 눌린 면·알약 */
+  --manuscript:  #fafaf6;   /* 원고지 바탕 */
+  --rule:        #23211e14; /* 원고지 괘선 */
+
+  --line:        #23211e24;
+  --line-strong: #23211e45;
+
+  --ink:         #23211e;   /* 먹 */
+  --ink-soft:    #55504a;
+  --ink-mute:    #625d52;
+
+  --ok:          #1f6b4a;
+  --alert:       #a8261c;
+
+  --shadow: 0 1px 2px #23211e14, 0 2px 10px #23211e14;
+}
+
+/* ═══ 밤의 원고지 (다크) ═══ */
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --bg:          #0b1322;
-  --bg-veil:     #0b1322f2;   /* 상단바용 반투명 */
-  --surface:     #141e33;
-  --surface-2:   #1b2740;
-  --manuscript:  #16203a;     /* 원고지 바탕 */
-  --rule:        #ffffff0f;   /* 원고지 괘선 */
-  --rule-accent: #e8b4574d;   /* 원고지 좌측 세로선 */
+  --bg:          #1a1917;
+  --bg-veil:     #1a1917f2;
+  --surface:     #232220;
+  --surface-2:   #121110;
+  --manuscript:  #232220;
+  --rule:        #ebe6dc14;
 
-  --line:        #ffffff1c;
-  --line-strong: #ffffff30;
+  --line:        #ebe6dc20;
+  --line-strong: #ebe6dc40;
 
-  --ink:         #eae7dd;     /* 순백이 아니라 따뜻한 미색 */
-  --ink-soft:    #a9b0c4;
-  --ink-mute:    #838fa8;
+  --ink:         #ebe6dc;
+  --ink-soft:    #b3ada1;
+  --ink-mute:    #989286;
 
-  --star:        #f0c661;   /* 장식·면·테두리 */
-  --star-ink:    #f0c661;   /* 글자 (어두운 화면에서는 같은 값) */
-  --star-soft:   #f0c66126;
-  --star-line:   #f0c66159;
-  --star-on-fill:#2a2208;     /* 별빛 바탕 위 글자 */
-
-  --leaf:        #7fc9a6;
-  --alert:       #ef9aa6;
+  --ok:          #74c79f;
+  --alert:       #f5a79d;
 
   /* 밝은 글자가 어두운 바탕에서 빽빽해 보이는 것을 되돌립니다. */
   --leading-body: 1.75;
   --tracking-body: 0.005em;
 
-  --shadow: 0 8px 28px #00000059;
-  --sky-1: #2a2f6b33;
-  --sky-2: #12386433;
+  --shadow: 0 2px 10px #00000066;
 }
 
-/* ═══ 한지 (낮) ═══ */
-:root[data-theme='light'] {
-  color-scheme: light;
-
-  --bg:          #f1ead9;   /* 한지 — 책상에 깔린 종이 */
-  --bg-veil:     #f1ead9f2;
-  --surface:     #fbf7ec;
-  --surface-2:   #e8e0cb;
-  --manuscript:  #fdfaf1;   /* 그 위에 놓인 원고지 한 장 */
-  --rule:        #1e24360f;
-  --rule-accent: #b4544a33;
-
-  --line:        #1e243620;
-  --line-strong: #1e243640;
-
-  --ink:         #1c2333;
-  --ink-soft:    #4b5468;
-  --ink-mute:    #5c6371;
-
-  /* 밝은 바탕에서는 글자용과 장식용을 나눠야 합니다.
-     글자를 읽히게 하려고 금색을 어둡게 하면 장식까지 칙칙해지기 때문입니다. */
-  --star:        #c9992e;      /* 장식·면·테두리 — 금색답게 */
-  --star-ink:    #7d5c11;      /* 글자 — 한지 바탕에서 4.5:1 이상 */
-  --star-soft:   #c9992e1f;
-  --star-line:   #c9992e66;
-  --star-on-fill:#2a2208;
-
-  --leaf:        #2a6e52;
-  --alert:       #b3323f;
-
-  --shadow: 0 6px 20px #1e24361a;
-  --sky-1: #4a5bb81a;
-  --sky-2: #2a6ea314;
+/* ── 포인트 색 ──
+   밝은 바탕에서는 글자용(--accent-ink)과 장식용(--accent)을 나눕니다.
+   채운 버튼 위의 글자는 --on-accent, 버튼 아래 두께는 --accent-deep.
+   ⓐ 잉크 블루 — 만년필 잉크. 기본값. */
+:root,
+:root[data-accent='blue'] {
+  --accent:      #17468a;   /* 종이 위 8.03:1 */
+  --accent-ink:  #17468a;
+  --accent-deep: #0f3466;   /* 버튼 두께 */
+  --accent-soft: #17468a14;
+  --accent-line: #17468a59;
+  --on-accent:   #ffffff;   /* 채운 면 위 9.21:1 */
+  --rule-accent: #17468a40; /* 원고지 좌측 여백선 */
+}
+/* ⓑ 인주 레드 — 도장 인주. */
+:root[data-accent='red'] {
+  --accent:      #a8261c;   /* 종이 위 6.19:1 */
+  --accent-ink:  #a8261c;
+  --accent-deep: #71170f;
+  --accent-soft: #a8261c14;
+  --accent-line: #a8261c59;
+  --on-accent:   #ffffff;   /* 채운 면 위 7.10:1 */
+  --rule-accent: #a8261c40;
 }
 
-/* 시스템 설정을 따르는 경우 (사용자가 직접 고르기 전) */
-@media (prefers-color-scheme: light) {
+/* 다크에서는 포인트가 바탕보다 밝아야 하므로 값이 뒤집힙니다. */
+:root[data-theme='dark'],
+:root[data-theme='dark'][data-accent='blue'] {
+  --accent:      #8fbdf5;   /* 9.01:1 */
+  --accent-ink:  #8fbdf5;
+  --accent-deep: #5a82b5;
+  --accent-soft: #8fbdf51f;
+  --accent-line: #8fbdf559;
+  --on-accent:   #141310;
+  --rule-accent: #8fbdf540;
+}
+:root[data-theme='dark'][data-accent='red'] {
+  --accent:      #f5a79d;   /* 9.12:1 */
+  --accent-ink:  #f5a79d;
+  --accent-deep: #b06f66;
+  --accent-soft: #f5a79d1f;
+  --accent-line: #f5a79d59;
+  --on-accent:   #141310;
+  --rule-accent: #f5a79d40;
+}
+
+/* 시스템이 어두운 모드일 때 (사용자가 직접 고르기 전) */
+@media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    color-scheme: light;
-    --bg: #f1ead9; --bg-veil: #f1ead9f2; --surface: #fbf7ec; --surface-2: #e8e0cb;
-    --manuscript: #fdfaf1; --rule: #1e24360f; --rule-accent: #b4544a33;
-    --line: #1e243620; --line-strong: #1e243640;
-    --ink: #1c2333; --ink-soft: #4b5468; --ink-mute: #5c6371;
-    --star: #c9992e; --star-ink: #7d5c11; --star-soft: #c9992e1f; --star-line: #c9992e66;
-    --leaf: #2a6e52; --alert: #b3323f;
-    --shadow: 0 6px 20px #1e24361a; --sky-1: #4a5bb81a; --sky-2: #2a6ea314;
+    color-scheme: dark;
+    --bg: #1a1917; --bg-veil: #1a1917f2; --surface: #232220; --surface-2: #121110;
+    --manuscript: #232220; --rule: #ebe6dc14;
+    --line: #ebe6dc20; --line-strong: #ebe6dc40;
+    --ink: #ebe6dc; --ink-soft: #b3ada1; --ink-mute: #989286;
+    --ok: #74c79f; --alert: #f5a79d;
+    --leading-body: 1.75; --tracking-body: 0.005em;
+    --shadow: 0 2px 10px #00000066;
+
+    --accent: #8fbdf5; --accent-ink: #8fbdf5; --accent-deep: #5a82b5;
+    --accent-soft: #8fbdf51f; --accent-line: #8fbdf559; --on-accent: #141310;
+    --rule-accent: #8fbdf540;
+  }
+  :root:not([data-theme])[data-accent='red'] {
+    --accent: #f5a79d; --accent-ink: #f5a79d; --accent-deep: #b06f66;
+    --accent-soft: #f5a79d1f; --accent-line: #f5a79d59; --on-accent: #141310;
+    --rule-accent: #f5a79d40;
   }
 }
 
-/* 큰 글씨 설정 */
-:root[data-textsize='large']  { --text-base: 1.125rem; --text-lg: 1.25rem;   --text-sm: 1rem; }
-:root[data-textsize='xlarge'] { --text-base: 1.25rem;  --text-lg: 1.4375rem; --text-sm: 1.125rem; }
+/* 큰 글씨 설정. 눈금 전체가 함께 올라가야 합니다.
+   일부만 올리면 작은 딱지와 본문이 같은 크기가 되어 위계가 무너집니다. */
+:root[data-textsize='large'] {
+  --text-xs: 0.875rem; --text-sm: 1rem;      --text-base: 1.125rem;
+  --text-lg: 1.25rem;  --text-xl: 1.5rem;    --text-2xl: 1.875rem;
+  --text-3xl: 2.375rem;
+  --poem-min: 1.125rem;
+}
+:root[data-textsize='xlarge'] {
+  --text-xs: 1rem;      --text-sm: 1.125rem;  --text-base: 1.25rem;
+  --text-lg: 1.4375rem; --text-xl: 1.625rem;  --text-2xl: 2rem;
+  --text-3xl: 2.5rem;
+  --poem-min: 1.25rem;
+}
 
 /* ═══════════════ 기본 ═══════════════ */
 
@@ -178,20 +265,15 @@ body {
   overflow-wrap: anywhere;
 }
 
-/* 배경. 그라데이션은 이 한 곳에만 씁니다. */
-.sky {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background:
-    radial-gradient(1200px 560px at 82% -10%, var(--sky-1), transparent 60%),
-    radial-gradient(900px 480px at 6% 2%, var(--sky-2), transparent 58%);
-}
+/* 바탕에 깔려 있던 두 겹의 방사형 그라데이션을 지웠습니다.
+   밤하늘을 흉내 내는 빛무리였는데, 종이를 기본으로 삼은 뒤로는
+   종이에 조명을 비춘 것처럼 보일 뿐이고, 어느 화면에서도 읽는 데
+   도움이 되지 않았습니다. 바탕은 body 의 한 색이면 충분합니다. */
 
 h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 
 a {
-  color: var(--star-ink);
+  color: var(--accent-ink);
   text-underline-offset: 0.18em;
   text-decoration-thickness: 1px;
 }
@@ -199,9 +281,9 @@ a {
 /* 우리가 그리지 않은 부분에도 디자인이 이어져야 합니다.
    선택 영역, 커서, 스크롤바, 자리표시자는 손대지 않으면
    브라우저 기본값 그대로 남아 어느 디자인에도 속하지 않습니다. */
-::selection { background: var(--star-soft); color: var(--ink); }
+::selection { background: var(--accent-soft); color: var(--ink); }
 
-input, textarea, select { caret-color: var(--star-ink); }
+input, textarea, select { caret-color: var(--accent-ink); }
 ::placeholder { color: var(--ink-mute); opacity: 1; }
 
 * { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
@@ -220,7 +302,7 @@ input, textarea, select { caret-color: var(--star-ink); }
 .stat-value, .cheer, .challenge-desc { font-variant-numeric: tabular-nums; }
 
 :where(button, a, input, select, textarea):focus-visible {
-  outline: 2px solid var(--star);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: var(--r-sm);
 }
@@ -247,6 +329,9 @@ input, textarea, select { caret-color: var(--star-ink); }
 
 /* ═══════════════ 버튼 ═══════════════ */
 
+/* 버튼의 두께는 장식이 아니라 손이 읽는 정보입니다.
+   아래쪽 그림자만큼 버튼이 떠 있고, 누르면 정확히 그만큼 내려갑니다.
+   읽는 얼굴(.face-read)에서는 --lift 가 0 이 되어 두께가 사라집니다. */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -255,27 +340,59 @@ input, textarea, select { caret-color: var(--star-ink); }
   min-height: var(--tap);
   padding: 0 var(--sp-5);
   border: 1px solid var(--line-strong);
-  border-radius: var(--r-md);
-  background: transparent;
+  border-radius: var(--r-btn);
+  background: var(--surface);
   color: var(--ink);
   font: inherit;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  box-shadow: 0 var(--lift) 0 var(--line-strong);
+  margin-bottom: var(--lift);
+  transition:
+    transform var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease),
+    background var(--dur) var(--ease),
+    border-color var(--dur) var(--ease);
 }
 .btn:hover:not(:disabled) { background: var(--surface-2); }
-.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn:active:not(:disabled) {
+  transform: translateY(var(--lift));
+  box-shadow: 0 0 0 var(--line-strong);
+}
+/* 흐리게 만드는 대신 또렷한 색으로 끕니다. 투명도는 뒤에 무엇이
+   깔렸는지에 따라 대비가 달라져 읽히는 보장을 할 수 없습니다. */
+.btn:disabled {
+  background: var(--surface-2);
+  border-color: transparent;
+  color: var(--ink-mute);
+  box-shadow: none;
+  margin-bottom: var(--lift);
+  cursor: not-allowed;
+}
 
 .btn-primary {
-  background: var(--star);
-  border-color: var(--star);
-  color: var(--star-on-fill);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
   font-weight: 700;
+  box-shadow: 0 var(--lift) 0 var(--accent-deep);
 }
-.btn-primary:hover:not(:disabled) { background: var(--star); filter: brightness(1.08); }
+.btn-primary:hover:not(:disabled) { background: var(--accent-deep); border-color: var(--accent-deep); }
+.btn-primary:active:not(:disabled) { box-shadow: 0 0 0 var(--accent-deep); }
 
-.btn-quiet { border-color: transparent; color: var(--ink-soft); }
+/* 하루에 한 번 누르는 큰 버튼 — 지도의 '이어서 걷기'. */
+.btn-lg { min-height: 56px; padding: 0 var(--sp-6); font-size: var(--text-lg); }
+
+.btn-quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  font-weight: 500;
+  box-shadow: none;
+  margin-bottom: 0;
+}
 .btn-quiet:hover:not(:disabled) { background: var(--surface-2); }
+.btn-quiet:active:not(:disabled) { transform: none; }
 
 .btn-block { width: 100%; }
 .btn-sm { min-height: var(--tap); padding: 0 var(--sp-4); font-size: var(--text-sm); }
@@ -424,12 +541,44 @@ textarea { min-height: 120px; resize: vertical; line-height: 1.8; }
   color: var(--ink-soft);
   font-weight: 500;
 }
-.stat-pill[data-kind='points'] { color: var(--star-ink); background: var(--star-soft); }
+.stat-pill[data-kind='points'] { color: var(--accent-ink); background: var(--accent-soft); }
+
+/* 앱 전체를 세로 한 줄로 쌓습니다. 이래야 main 이 '남은 높이'를 알 수 있고,
+   방 화면에서 채팅 기록이 그 남은 높이를 그대로 가져갈 수 있습니다. */
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
 
 main {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
   max-width: var(--measure);
   margin: 0 auto;
   padding: var(--sp-5) var(--sp-4) calc(var(--tabbar-h) + var(--sp-10));
+}
+
+/* 방은 목록이 아니라 꽉 찬 한 화면입니다.
+   남는 높이를 대화 기록이 가져가고 입력줄이 바닥에 붙습니다.
+   예전에는 채팅 기록 높이를 100dvh 에서 숫자들을 빼서 구했는데,
+   큰 글씨 설정을 켜면 그 숫자가 전부 틀려져 입력창의 75%가 탭바 아래로
+   내려갔습니다. 빼기를 그만두고 남는 공간을 주는 쪽으로 바꿨습니다. */
+/* min-height 로 두면 대화가 길어질 때 #app 자체가 늘어나 페이지가 스크롤되고,
+   입력줄이 다시 화면 밖으로 밀립니다. 방 화면에서만 높이를 못박습니다. */
+body[data-view='room'] #app { height: 100dvh; }
+body[data-view='room'] main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+body[data-view='room'] .view[data-view='room'],
+#room-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .tabbar {
@@ -453,12 +602,12 @@ main {
   border: 0;
   background: transparent;
   color: var(--ink-mute);
-  font-size: 0.6875rem;
+  font-size: var(--text-xs);
   font-family: inherit;
   cursor: pointer;
 }
 .tab .icon { width: 22px; height: 22px; }
-.tab[aria-current='page'] { color: var(--star-ink); }
+.tab[aria-current='page'] { color: var(--accent-ink); }
 
 /* ═══════════════ 구획 제목 ═══════════════ */
 
@@ -518,9 +667,9 @@ main {
 
 .poem-body {
   font-family: var(--font-poem);
-  /* 좁은 화면에서 시행이 접히는 것을 줄입니다. 글자 크기가 줄어도
-     시행이 온전히 한 줄에 놓이는 쪽이 읽기에 낫습니다. */
-  font-size: clamp(1rem, 4.3vw, var(--text-lg));
+  /* 좁은 화면에서 시행이 접히는 것을 줄입니다. 바닥값이 토큰이라
+     큰 글씨 설정이 360px 화면에서도 시 본문까지 닿습니다. */
+  font-size: var(--poem-size);
 }
 .poem-body .stanza { margin: 0 0 1.9em; }
 .poem-body .stanza:last-child { margin-bottom: 0; }
@@ -599,35 +748,71 @@ main {
   background: var(--surface-2);
   color: var(--ink-soft);
 }
-.mission.is-done .mission-kind { background: transparent; color: var(--leaf); }
+.mission.is-done .mission-kind { background: transparent; color: var(--ok); }
 .mission-title { flex: 1; font-size: var(--text-base); }
-.mission-points { font-size: var(--text-sm); color: var(--star-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.mission-points { font-size: var(--text-sm); color: var(--accent-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
 
 .mission-prompt { margin: var(--sp-3) 0 var(--sp-4); color: var(--ink-soft); line-height: 1.8; }
 .mission-actions { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
 .mission-hint { font-size: var(--text-sm); color: var(--ink-mute); font-variant-numeric: tabular-nums; }
 
-.choices { display: grid; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+.choices { display: grid; gap: var(--sp-3); margin-bottom: var(--sp-4); }
 .choice {
-  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 52px;
   padding: var(--sp-3) var(--sp-4);
   text-align: left;
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: var(--bg);
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--r-btn);
+  background: var(--surface);
   color: var(--ink);
   font: inherit;
   line-height: 1.6;
   cursor: pointer;
-  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+  box-shadow: 0 var(--lift) 0 var(--line-strong);
+  margin-bottom: var(--lift);
+  transition:
+    transform var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease),
+    border-color var(--dur) var(--ease),
+    background var(--dur) var(--ease);
 }
-.choice:hover:not(:disabled) { border-color: var(--line-strong); }
-.choice[aria-pressed='true'] { border-color: var(--star); background: var(--star-soft); }
-.choice.is-correct { border-color: var(--leaf); background: color-mix(in srgb, var(--leaf) 12%, transparent); }
-.choice.is-wrong { border-color: var(--alert); background: color-mix(in srgb, var(--alert) 10%, transparent); }
+.choice:active:not(:disabled) {
+  transform: translateY(var(--lift));
+  box-shadow: 0 0 0 var(--line-strong);
+}
+.choice[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 var(--lift) 0 var(--accent-line);
+}
+/* 채점 결과. 색만으로 알리지 않도록 앞에 표식을 함께 둡니다. */
+.choice.is-correct,
+.choice.is-wrong { font-weight: 600; }
+.choice.is-correct {
+  border-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 12%, var(--surface));
+  box-shadow: 0 var(--lift) 0 var(--ok);
+}
+.choice.is-wrong {
+  border-color: var(--alert);
+  background: color-mix(in srgb, var(--alert) 10%, var(--surface));
+  box-shadow: 0 var(--lift) 0 var(--alert);
+}
+.choice.is-correct::before,
+.choice.is-wrong::before {
+  flex: none;
+  width: 1.25em;
+  font-weight: 700;
+  text-align: center;
+}
+.choice.is-correct::before { content: '\2713'; color: var(--ok); }
+.choice.is-wrong::before { content: '\2715'; color: var(--alert); }
 
 .result { margin: var(--sp-3) 0 0; font-size: var(--text-sm); line-height: 1.75; }
-.result.ok { color: var(--leaf); }
+.result.ok { color: var(--ok); }
 .result.no { color: var(--alert); }
 .result:empty { margin: 0; }
 
@@ -648,11 +833,11 @@ main {
   gap: var(--sp-3);
   margin-top: var(--sp-5);
   padding: var(--sp-6);
-  border: 1px dashed var(--star-line);
+  border: 1px dashed var(--accent-line);
   border-radius: var(--r-lg);
   text-align: center;
   font-family: var(--font-poem);
-  color: var(--star-ink);
+  color: var(--accent-ink);
   line-height: 1.9;
 }
 .day-done .icon { width: 28px; height: 28px; }
@@ -680,11 +865,14 @@ main {
 }
 .poem-row:hover { background: var(--surface); }
 .poem-row .icon { color: var(--ink-mute); }
-.poem-row[data-read='true'] .icon { color: var(--star-ink); }
+.poem-row[data-read='true'] .icon { color: var(--accent-ink); }
 .poem-row-title { font-family: var(--font-poem); font-size: var(--text-lg); }
 .poem-row-sub { font-size: var(--text-xs); color: var(--ink-mute); }
 
 dialog.sheet {
+  --lift: 0px;
+  --dur: 1ms;
+  --r-btn: var(--r-sm);
   width: min(38rem, calc(100% - var(--sp-6)));
   max-height: 86dvh;
   padding: 0;
@@ -694,7 +882,7 @@ dialog.sheet {
   color: var(--ink);
   overflow: hidden;
 }
-dialog.sheet::backdrop { background: #04070ecc; }
+dialog.sheet::backdrop { background: #1a1917cc; }
 .sheet-body { max-height: calc(86dvh - 64px); overflow-y: auto; }
 .sheet-foot {
   display: flex; justify-content: flex-end;
@@ -727,8 +915,8 @@ dialog.sheet::backdrop { background: #04070ecc; }
   display: grid;
   gap: var(--sp-4);
   align-content: start;
-  height: calc(100dvh - var(--tabbar-h) - 13.5rem);
-  min-height: 16rem;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   padding-bottom: var(--sp-2);
   overscroll-behavior: contain;
@@ -751,8 +939,8 @@ dialog.sheet::backdrop { background: #04070ecc; }
 .msg[data-mine='true'] .msg-bubble {
   border-top-left-radius: var(--r-lg);
   border-top-right-radius: var(--sp-1);
-  background: var(--star-soft);
-  border: 1px solid var(--star-line);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
 }
 
 /* 봇의 말 — 말풍선이 아니라 가운데 놓인 기록 */
@@ -770,15 +958,15 @@ dialog.sheet::backdrop { background: #04070ecc; }
   text-align: center;
 }
 .msg[data-bot='true'] .icon { color: var(--ink-mute); }
-.msg[data-kind='challenge'] .msg-bubble { border-color: var(--star-line); color: var(--star-ink); }
-.msg[data-kind='challenge'] .icon { color: var(--star-ink); }
+.msg[data-kind='challenge'] .msg-bubble { border-color: var(--accent-line); color: var(--accent-ink); }
+.msg[data-kind='challenge'] .icon { color: var(--accent-ink); }
 .msg[data-kind='poem'] .msg-bubble { font-family: var(--font-poem); font-size: var(--text-base); line-height: 1.95; }
 
 .share-tag {
   display: block;
   margin-bottom: var(--sp-2);
   font-size: var(--text-xs);
-  color: var(--star-ink);
+  color: var(--accent-ink);
   letter-spacing: 0.02em;
 }
 
@@ -801,7 +989,7 @@ dialog.sheet::backdrop { background: #04070ecc; }
   cursor: pointer;
 }
 .cheer .icon { width: 17px; height: 17px; }
-.cheer[aria-pressed='true'] { border-color: var(--star-line); background: var(--star-soft); color: var(--star-ink); }
+.cheer[aria-pressed='true'] { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent-ink); }
 
 .chat-form { display: flex; gap: var(--sp-2); padding-top: var(--sp-3); }
 .chat-form input { flex: 1; }
@@ -839,7 +1027,7 @@ dialog.sheet::backdrop { background: #04070ecc; }
   padding: var(--sp-2) var(--sp-2);
   border-bottom: 1px solid var(--line);
 }
-.rank-row[data-me='true'] { background: var(--star-soft); border-radius: var(--r-sm); border-bottom-color: transparent; }
+.rank-row[data-me='true'] { background: var(--accent-soft); border-radius: var(--r-sm); border-bottom-color: transparent; }
 .rank-no {
   font-family: var(--font-poem);
   font-size: var(--text-lg);
@@ -848,8 +1036,8 @@ dialog.sheet::backdrop { background: #04070ecc; }
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
-.rank-row:nth-child(-n + 3) .rank-no { color: var(--star-ink); }
-.rank-points { color: var(--star-ink); font-size: var(--text-sm); font-weight: 600; font-variant-numeric: tabular-nums; }
+.rank-row:nth-child(-n + 3) .rank-no { color: var(--accent-ink); }
+.rank-points { color: var(--accent-ink); font-size: var(--text-sm); font-weight: 600; font-variant-numeric: tabular-nums; }
 .rank-me-note { margin-top: var(--sp-4); text-align: center; font-size: var(--text-sm); color: var(--ink-mute); }
 
 /* ═══════════════ 나 ═══════════════ */
@@ -867,14 +1055,14 @@ dialog.sheet::backdrop { background: #04070ecc; }
   border-block: 1px solid var(--line);
 }
 .stat { display: grid; gap: 2px; justify-items: center; }
-.stat-value { font-family: var(--font-poem); font-size: var(--text-xl); font-weight: 700; color: var(--star-ink); font-variant-numeric: tabular-nums; }
+.stat-value { font-family: var(--font-poem); font-size: var(--text-xl); font-weight: 700; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
 .stat-label { font-size: var(--text-xs); color: var(--ink-mute); }
 
 .activity { display: flex; gap: 3px; margin-top: var(--sp-5); }
 .activity-day { flex: 1; height: 28px; border-radius: 3px; background: var(--surface-2); }
-.activity-day[data-level='1'] { background: color-mix(in srgb, var(--star) 28%, var(--surface-2)); }
-.activity-day[data-level='2'] { background: color-mix(in srgb, var(--star) 58%, var(--surface-2)); }
-.activity-day[data-level='3'] { background: var(--star); }
+.activity-day[data-level='1'] { background: color-mix(in srgb, var(--accent) 28%, var(--surface-2)); }
+.activity-day[data-level='2'] { background: color-mix(in srgb, var(--accent) 58%, var(--surface-2)); }
+.activity-day[data-level='3'] { background: var(--accent); }
 
 .challenge-groups { display: grid; gap: var(--sp-6); }
 .challenge-group > h3 {
@@ -885,25 +1073,33 @@ dialog.sheet::backdrop { background: #04070ecc; }
   font-weight: 600;
 }
 .challenge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: var(--sp-2); }
+/* 아직 받지 못한 과제를 opacity 로 흐리게 두었더니 글자가 2.19:1 까지
+   떨어졌습니다. 투명도는 합성 결과를 미리 알 수 없으므로, 받은 것과
+   못 받은 것은 테두리와 글자색으로 구별합니다. */
 .challenge {
   display: grid;
   gap: var(--sp-1);
   padding: var(--sp-4);
-  border: 1px solid var(--line);
+  border: 1px dashed var(--line-strong);
   border-radius: var(--r-md);
-  opacity: 0.55;
+  color: var(--ink-soft);
 }
-.challenge[data-earned='true'] { opacity: 1; border-color: var(--star-line); background: var(--star-soft); }
+.challenge[data-earned='true'] {
+  border-style: solid;
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--ink);
+}
 .challenge .icon { width: 20px; height: 20px; color: var(--ink-mute); }
-.challenge[data-earned='true'] .icon { color: var(--star-ink); }
+.challenge[data-earned='true'] .icon { color: var(--accent-ink); }
 .challenge-name { font-size: var(--text-sm); font-weight: 600; }
 .challenge-desc { font-size: var(--text-xs); color: var(--ink-mute); line-height: 1.55; }
 .meter { height: 3px; margin-top: var(--sp-1); border-radius: 2px; background: var(--line); overflow: hidden; }
-.meter > i { display: block; height: 100%; background: var(--star); }
+.meter > i { display: block; height: 100%; background: var(--accent); }
 
 .panel { display: grid; gap: var(--sp-4); padding: var(--sp-5); border: 1px solid var(--line); border-radius: var(--r-lg); }
 .switch-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); min-height: var(--tap); }
-.switch-row input[type='checkbox'] { width: auto; min-height: 0; accent-color: var(--star); transform: scale(1.3); }
+.switch-row input[type='checkbox'] { width: auto; min-height: 0; accent-color: var(--accent); transform: scale(1.3); }
 .switch-row input[type='number'] { width: 4.5rem; min-height: var(--tap); text-align: center; }
 .switch-row select { width: auto; }
 .quiet-range { display: flex; align-items: center; gap: var(--sp-2); }
@@ -961,7 +1157,7 @@ dialog.sheet::backdrop { background: #04070ecc; }
   line-height: 1.6;
   animation: toast-in var(--dur) var(--ease);
 }
-.toast[data-tone='star'] { border-color: var(--star-line); color: var(--star-ink); }
+.toast[data-tone='star'] { border-color: var(--accent-line); color: var(--accent-ink); }
 .toast .icon { flex: none; }
 
 body[data-view='room'] .toasts {
@@ -976,6 +1172,23 @@ body[data-view='room'] .toasts {
 @keyframes draw-check { from { stroke-dashoffset: 26; } to { stroke-dashoffset: 0; } }
 .mission.is-done .mission-kind .icon { stroke-dasharray: 26; animation: draw-check 380ms var(--ease); }
 
+/* 정답. 고른 칸이 한 번 솟았다 제자리로 돌아옵니다.
+   버튼이 눌리는 방향과 반대이므로 '맞았다'는 뜻이 몸으로 읽힙니다.
+   0.34초에 끝나고 반복하지 않습니다. 읽는 얼굴에는 이 모션이 없습니다. */
+@keyframes answer-rise {
+  40% { transform: translateY(-3px); }
+  100% { transform: translateY(0); }
+}
+.choice.is-correct[aria-pressed='true'] { animation: answer-rise 340ms var(--ease); }
+
+/* 오답. 좌우로 아주 조금. 흔들림이 크면 벌주는 느낌이 됩니다. */
+@keyframes answer-nudge {
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+  100% { transform: translateX(0); }
+}
+.choice.is-wrong[aria-pressed='true'] { animation: answer-nudge 220ms var(--ease); }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -984,6 +1197,4 @@ body[data-view='room'] .toasts {
   }
 }
 
-@media (min-width: 48rem) {
-  .chat-log { height: calc(100dvh - var(--tabbar-h) - 15rem); }
-}
+
