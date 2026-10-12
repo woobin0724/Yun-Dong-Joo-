@@ -4,7 +4,7 @@
 
 import {
   $, $$, esc, icon, mascot, num, api, toast,
-  poemBodyHtml, poemHtml, formatWritten, euroRo,
+  poemBodyHtml, poemHtml, formatWritten, euroRo, iGa,
 } from './core.js';
 import { mountJourney, loadJourney } from './journey.js';
 import { mountTranscribe, openTranscribe, layout } from './transcribe.js';
@@ -453,24 +453,83 @@ async function submit(card, missionId, payload) {
 }
 
 // ───────── 시집 ─────────
+const library = { data: null, q: '', filter: 'all' };
+
 async function loadLibrary() {
-  const data = await api('/poems');
-  $('#library-count').textContent = `${data.readCount} / ${data.total}편`;
-  $('#poem-index').innerHTML = data.poems
-    .map(
-      (p) => `<button class="poem-row" data-poem="${esc(p.id)}" data-read="${p.read}">
-        ${icon('star', p.read ? 'icon-solid' : '')}
-        <span>
-          <span class="poem-row-title">${esc(p.title)}</span>
-          <span class="poem-row-sub">${esc(formatWritten(p.written))}</span>
-        </span>
-      </button>`,
-    )
-    .join('');
+  library.data = await api('/poems');
+  const d = library.data;
+  $('#library-count').textContent = `${d.readCount} / ${d.total}편 읽음`;
+  renderLibrary();
+}
+
+/** 띄어쓰기·문장부호를 걷어 내고 비교한다. "별헤는" 으로도 「별 헤는 밤」이 나온다. */
+const squash = (t) => String(t).toLowerCase().replace(/[\s.,!?…·—\-:;"'“”‘’「」『』()]/gu, '');
+
+function renderLibrary() {
+  const d = library.data;
+  if (!d) return;
+  const q = squash(library.q);
+  const pass = (p) =>
+    library.filter === 'unread' ? !p.read : library.filter === 'transcribed' ? p.transcribed : true;
+
+  const rows = d.poems
+    .filter(pass)
+    .map((p) => {
+      if (!q) return { p, hit: null };
+      if (squash(p.title).includes(q)) return { p, hit: null };
+      const hit = p.lines.find((l) => squash(l).includes(q));
+      return hit ? { p, hit } : null;
+    })
+    .filter(Boolean);
+
+  const empty = $('#library-empty');
+  empty.hidden = rows.length > 0;
+  empty.textContent = q
+    ? `"${library.q}"${iGa(library.q)} 든 시가 없습니다. 띄어쓰기는 상관없습니다 — 낱말을 줄여 보세요.`
+    : library.filter === 'transcribed'
+      ? '아직 옮겨 적은 시가 없습니다. 시를 펼쳐 \'옮겨 적기\' 를 눌러 보세요.'
+      : '모두 읽었습니다.';
+
+  const rowHtml = ({ p, hit }) => `<button class="poem-row" data-poem="${esc(p.id)}" data-read="${p.read}">
+      ${icon(p.transcribed ? 'pen' : 'star', p.read ? 'icon-solid' : '')}
+      <span>
+        <span class="poem-row-title">${esc(p.title)}</span>
+        <span class="poem-row-sub">${
+          hit ? `<span class="poem-row-hit">${esc(hit)}</span>` : esc(formatWritten(p.written))
+        }${p.transcribed ? ' · 옮겨 적음' : ''}</span>
+      </span>
+    </button>`;
+
+  // 장마다 묶는다. 길의 장과 같은 이름이라 '어디까지 왔는지' 와 이어진다.
+  const groups = d.chapters
+    .map((c) => ({ c, items: rows.filter((r) => r.p.chapterId === c.id) }))
+    .filter((g) => g.items.length);
+  const loose = rows.filter((r) => !r.p.chapterId);
+  $('#poem-index').innerHTML =
+    groups
+      .map(
+        (g) => `<section class="library-group">
+          <h3 class="library-group-h">${esc(g.c.place)} <span>${esc(g.c.hint)} · ${num(g.items.length)}편</span></h3>
+          ${g.items.map(rowHtml).join('')}
+        </section>`,
+      )
+      .join('') + loose.map(rowHtml).join('');
 
   for (const btn of $$('.poem-row')) {
     btn.addEventListener('click', () => openPoem(btn.dataset.poem));
   }
+}
+
+$('#library-q').addEventListener('input', (e) => {
+  library.q = e.target.value;
+  renderLibrary();
+});
+for (const btn of $$('#library-filter button')) {
+  btn.addEventListener('click', () => {
+    for (const b of $$('#library-filter button')) b.setAttribute('aria-selected', String(b === btn));
+    library.filter = btn.dataset.filter;
+    renderLibrary();
+  });
 }
 
 async function openPoem(poemId) {

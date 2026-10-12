@@ -1751,3 +1751,17 @@ details.chapter > .node-list { margin-top: var(--sp-3); }
   color: var(--alert);
 }
 .blocks-list { margin: 0; padding: 0; list-style: none; }
+
+/* ═══════════════ 시집 — 찾기와 묶음 ═══════════════ */
+.library-q { margin-bottom: var(--sp-3); }
+.library-group { margin-top: var(--sp-5); }
+.library-group-h {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-1);
+  font-family: var(--font-poem);
+  font-size: var(--text-base);
+}
+.library-group-h span { font-family: var(--font-ui); font-size: var(--text-xs); color: var(--ink-mute); font-weight: 400; }
+.poem-row-hit { font-family: var(--font-poem); color: var(--ink-soft); }

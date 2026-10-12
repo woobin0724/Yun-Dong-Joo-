@@ -103,3 +103,15 @@ test('로그인하지 않으면 필사에 들어갈 수 없다', async () => {
   const anon = server.client();
   assert.equal((await anon('/api/transcriptions')).status, 401);
 });
+
+test('시집은 본문·장·옮겨 적음을 함께 준다 — 구절로 찾고 장별로 묶으려고', async () => {
+  const { call } = await fresh();
+  await call('/api/transcriptions', { method: 'POST', body: { poemId: POEM, text: TEXT } });
+  const { body } = await call('/api/poems');
+  const seosi = body.poems.find((p) => p.id === POEM);
+  assert.ok(seosi.lines.includes('죽는 날까지 하늘을 우러러'));
+  assert.equal(seosi.transcribed, true);
+  assert.ok(seosi.chapterId, '장이 있어야 합니다');
+  assert.ok(body.chapters.some((c) => c.id === seosi.chapterId));
+  assert.equal(body.poems.find((p) => p.id !== POEM).transcribed, false);
+});

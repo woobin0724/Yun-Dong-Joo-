@@ -4,11 +4,21 @@ import { todaysPoem, poemReadIds } from '../services/missions.js';
 import { recordPoemRead } from '../services/activity.js';
 import { requireAuth, asyncRoute } from './middleware.js';
 import { AppError } from '../services/users.js';
+import { NODES, CHAPTERS } from '../content/journey.js';
+import { getDb } from '../db.js';
 
 export const poemsRouter = Router();
 
 poemsRouter.get('/', (req, res) => {
   const read = new Set(req.user ? poemReadIds(req.user.id) : []);
+  const transcribed = new Set(
+    req.user
+      ? getDb()
+          .prepare('SELECT DISTINCT poem_id FROM transcriptions WHERE user_id = ?')
+          .all(req.user.id)
+          .map((r) => r.poem_id)
+      : [],
+  );
   res.json({
     poems: POEMS.map((p) => ({
       id: p.id,
@@ -18,8 +28,14 @@ poemsRouter.get('/', (req, res) => {
       form: p.form,
       themes: p.themes,
       preview: poemPreview(p),
+      // 구절로 찾을 수 있게 본문을 함께 보낸다. 학생은 제목보다 구절을 기억한다.
+      // 열아홉 편이라 전부 보내도 몇 KB 다.
+      lines: p.stanzas.flat(),
+      chapterId: NODES.find((n) => n.poemId === p.id)?.chapterId ?? null,
       read: read.has(p.id),
+      transcribed: transcribed.has(p.id),
     })),
+    chapters: CHAPTERS.map((c) => ({ id: c.id, place: c.place, hint: c.hint, ord: c.ord })),
     total: POEMS.length,
     readCount: read.size,
   });

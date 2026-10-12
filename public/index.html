@@ -253,6 +253,15 @@
 
     <section class="view" data-view="library" hidden>
       <div class="section-head"><h2>시집</h2><span id="library-count" class="muted"></span></div>
+      <!-- 학생은 제목보다 구절을 기억합니다. 구절로도 찾고, 띄어쓰기가 달라도 찾습니다. -->
+      <label class="sr-only" for="library-q">시 찾기 — 제목이나 구절</label>
+      <input id="library-q" class="library-q" type="search" placeholder="제목이나 기억나는 구절" autocomplete="off" />
+      <div class="segmented" id="library-filter" role="tablist" aria-label="거르기">
+        <button type="button" role="tab" data-filter="all" aria-selected="true">전체</button>
+        <button type="button" role="tab" data-filter="unread" aria-selected="false">안 읽은 시</button>
+        <button type="button" role="tab" data-filter="transcribed" aria-selected="false">옮겨 적은 시</button>
+      </div>
+      <p id="library-empty" class="note" hidden></p>
       <div id="poem-index" class="poem-index"></div>
     </section>
 
