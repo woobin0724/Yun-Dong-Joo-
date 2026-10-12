@@ -5,7 +5,7 @@
   "description": "윤동주 시인 교육용 웹앱 — 정기 시 알림, 일일 미션, 도전과제, 응원 채팅, 랭킹",
   "type": "module",
   "engines": {
-    "node": ">=22.5.0"
+    "node": ">=22.13.0"
   },
   "scripts": {
     "start": "node src/server.js",
@@ -22,7 +22,8 @@
     "design:check": "impeccable detect public/",
     "content:check": "node scripts/check-content.js",
     "design:compare": "node scripts/compare-design.js",
-    "e2e": "node scripts/screenshot.js screenshots/shots"
+    "e2e": "node scripts/screenshot.js screenshots/shots",
+    "backup": "node scripts/backup-db.js"
   },
   "dependencies": {
     "express": "^5.1.0",

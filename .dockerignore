@@ -1,0 +1,18 @@
+# 이미지에 넣지 않는 것. 특히 .env 와 data/ 는 절대 들어가면 안 된다 —
+# 비밀 키와 학생 기록이 이미지에 박혀 퍼진다.
+.env
+.env.*
+!.env.example
+data
+node_modules
+screenshots
+test
+scripts
+# 백업 스크립트만은 운영 서버에서 써야 하므로 넣는다(npm run backup).
+!scripts/backup-db.js
+docs
+.git
+.github
+.claude
+.impeccable
+*.log

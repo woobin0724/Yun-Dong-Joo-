@@ -21,9 +21,20 @@ cp .env.example .env          # 값은 그대로 두어도 동작합니다
 npm start                     # http://localhost:3000
 ```
 
-Node.js **22.5 이상**이 필요합니다. 데이터베이스는 Node에 내장된 `node:sqlite` 를 쓰므로
+Node.js **22.13 이상**이 필요합니다(`node:sqlite` 가 플래그 없이 열린 버전). 데이터베이스는 Node에 내장된 `node:sqlite` 를 쓰므로
 네이티브 빌드 의존성이 없습니다. 런타임 의존성은 `express` 와 `web-push` 둘뿐이고,
 프런트엔드는 빌드 단계 없이 그대로 제공됩니다.
+
+### 배포 — 선생님과 반이 주소 하나로 쓰게 하기
+
+**Streamlit 으로는 열 수 없습니다**(파이썬용 도구이고, 이 앱은 Node.js 서버입니다).
+순서는 [docs/배포-안내.md](docs/배포-안내.md) 에, 선생님께 드릴 한 장 안내는 [docs/선생님께.md](docs/선생님께.md) 에 있습니다.
+
+- `render.yaml` — Render 블루프린트. 웹 서비스 + 영구 디스크 + 세션 키를 한 번에 만듭니다.
+- `Dockerfile` — Railway·Fly.io·학교 서버 등 Docker 를 돌리는 어디서나.
+- `npm run backup` — 서버가 켜진 채로 학생 기록을 한 벌 떠 둡니다.
+
+학생 기록은 SQLite 파일 하나에 쌓이므로 **영구 디스크가 꼭 필요**합니다. 없으면 배포할 때마다 기록이 사라집니다.
 
 ### 알림(웹푸시) 켜기
 

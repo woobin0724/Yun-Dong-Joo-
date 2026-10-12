@@ -44,7 +44,7 @@ export function setOAuthCookie(res, value) {
   res.cookie(OAUTH_COOKIE, value, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: config.isProduction,
+    secure: config.cookieSecure,
     maxAge: MAX_AGE_MS,
     path: '/api/auth',
   });

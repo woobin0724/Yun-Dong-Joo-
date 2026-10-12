@@ -1,0 +1,47 @@
+# Render 블루프린트 — '별 헤는 밤' 을 한 번에 올리는 설정
+#
+# 쓰는 법은 docs/배포-안내.md 에 있습니다. 요약:
+#   Render 대시보드 → New → Blueprint → 이 저장소 선택 → Apply
+#
+# 이 설정의 뼈대는 Render 가 직접 관리하는 예제 render-examples/strapi-sqlite 의
+# render.yaml 과 같습니다(Node + SQLite 파일 + 영구 디스크). 2026-10-12 에 GitHub 에서
+# 원문을 읽고 맞췄습니다. Render 문서 사이트는 작업 환경에서 열리지 않아 확인하지
+# 못했습니다 — 대시보드에서 다른 말이 나오면 대시보드를 따르세요.
+services:
+  - type: web
+    name: byeol-heneun-bam
+    runtime: node
+    # 영구 디스크는 무료(free) 인스턴스에 붙지 않습니다. 디스크 없이 무료로 올리면
+    # 서버가 재시작·재배포될 때마다 학생 기록이 모두 사라집니다. 그래서 starter 입니다.
+    # 요금은 Render 화면에서 확인하세요.
+    plan: starter
+    # 서울에서 가까운 지역을 쓰고 싶으면 아래 줄의 # 를 지우세요. 지역은 서비스를
+    # 만든 뒤에는 바꿀 수 없습니다. 이 값이 맞는지는 Render 화면에서 확인하지 못했습니다.
+    # region: singapore
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    disk:
+      name: byeol-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # node:sqlite 가 플래그 없이 열린 것이 22.13.0 입니다(Node 변경 기록).
+      - key: NODE_VERSION
+        value: ~22.22.0
+      - key: DB_PATH
+        value: /var/data/app.db
+      # 세션 서명 키. Render 가 처음 한 번 무작위로 만들어 줍니다. 바꾸면 모두 로그아웃됩니다.
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: APP_TIMEZONE
+        value: Asia/Seoul
+      - key: ENABLE_SCHEDULER
+        value: "true"
+      # 알림(웹푸시)과 구글 로그인은 필요할 때 대시보드의 Environment 에서 직접 넣습니다.
+      #   VAPID_PUBLIC_KEY · VAPID_PRIVATE_KEY · VAPID_SUBJECT
+      #   GOOGLE_CLIENT_ID · GOOGLE_CLIENT_SECRET · GOOGLE_REDIRECT_URI
+      # 비워 두면 알림 칸에 '지금은 켤 수 없습니다' 가 뜨고, 아이디+PIN 로그인만 됩니다.

@@ -1,3 +1,4 @@
+import { config } from '../config.js';
 import { resolveSession, AppError } from '../services/users.js';
 
 export const SESSION_COOKIE = 'ydj_session';
@@ -28,7 +29,7 @@ export function setSessionCookie(res, token, expiresAt) {
   res.cookie(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: config.cookieSecure,
     expires: expiresAt,
     path: '/',
   });
