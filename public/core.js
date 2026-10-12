@@ -75,7 +75,11 @@ export function toast(message, { tone = '', iconName = '', ms = 4000 } = {}) {
   if (tone) el.dataset.tone = tone;
   el.innerHTML = iconName ? icon(iconName) : '';
   el.append(document.createTextNode(message)); // 텍스트는 노드로 붙여 주입을 막습니다
-  $('#toasts').append(el);
+  const box = $('#toasts');
+  // 한 번에 둘까지만. 더 오면 가장 오래된 것을 치운다. 넷이 쌓여 하루를 끝낸
+  // 화면을 덮은 적이 있다.
+  while (box.children.length >= 2) box.firstElementChild.remove();
+  box.append(el);
   setTimeout(() => el.remove(), ms);
 }
 

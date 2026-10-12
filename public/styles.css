@@ -1830,3 +1830,6 @@ details.chapter > .node-list { margin-top: var(--sp-3); }
 .btn-danger:disabled { background: var(--surface-2); border-color: transparent; color: var(--ink-mute); box-shadow: none; }
 .delete-list { margin: 0; padding-left: var(--sp-5); display: grid; gap: var(--sp-1); font-size: var(--text-sm); color: var(--ink-soft); line-height: 1.7; }
 #delete-account-btn { color: var(--alert); }
+.day-done-earned { margin: 0; font-family: var(--font-ui); font-size: var(--text-sm); color: var(--ink-soft); }
+.day-done:focus { outline: none; }
+.day-done:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }

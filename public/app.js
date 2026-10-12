@@ -1,6 +1,10 @@
 /* 별 헤는 밤 — 프런트엔드
    빌드 도구 없이 도는 표준 ES 모듈입니다.
-   공용 도우미는 core.js, 「동주의 길」은 journey.js 에 있습니다. */
+   화면마다 파일이 따로 있습니다:
+     core.js 공용 도우미 · shared.js 공용 상태 · journey.js 길과 레슨
+     transcribe.js 원고지 필사 · exam.js 시험 대비 · room.js 방
+     ranking.js 랭킹·리그 · me.js 「나」
+   이 파일에는 로그인, 화면 전환, 오늘의 시, 시집, 테마, 시작이 남아 있습니다. */
 
 import {
   $, $$, esc, icon, mascot, num, api, toast,
@@ -9,32 +13,17 @@ import {
 import { mountJourney, loadJourney } from './journey.js';
 import { mountTranscribe, openTranscribe, layout } from './transcribe.js';
 import { mountExam, loadExamCard } from './exam.js';
+import { state, challengeToast } from './shared.js';
+import { loadRooms, renderRoomView } from './room.js';
+import { loadRanking } from './ranking.js';
+import { loadMe } from './me.js';
 
-const challengeToast = (c) =>
-  toast(`${c.title} — ${c.description}`, { tone: 'star', iconName: 'star', ms: 5000 });
 
 // 미션 갈래별 아이콘
 const KIND_ICON = { check: 'speak', text: 'pen', quiz: 'quiz' };
 const KIND_LABEL = { check: '낭독', text: '쓰기', quiz: '퀴즈' };
 
-// 응원 종류 — 전부 시의 심상에서 가져왔습니다.
-const CHEERS = [
-  { key: 'star', icon: 'star', label: '별 하나' },
-  { key: 'heart', icon: 'heart', label: '마음' },
-  { key: 'leaf', icon: 'leaf', label: '잎새' },
-  { key: 'sparkle', icon: 'sparkle', label: '반짝임' },
-];
 
-// ───────── 상태 ─────────
-const state = {
-  user: null,
-  today: null,
-  rooms: [],
-  activeRoomId: null,
-  messages: [],
-  eventSource: null,
-  ranking: { scope: 'room', period: 'week' },
-};
 
 // ───────── 테마 · 글씨 크기 ─────────
 function currentTheme() {
@@ -261,6 +250,13 @@ function switchView(name) {
     guarded(loadJourney, { into });
     guarded(loadExamCard, { into: '#exam-card' });
   }
+  if (target === 'today' && state.today?.poem) {
+    const id = state.today.poem.id;
+    clearTimeout(state.todayReadTimer);
+    state.todayReadTimer = setTimeout(() => {
+      if (document.body.dataset.view === 'today') markPoemRead(id);
+    }, dwellMsFor(state.today.poem) / 2);
+  }
   if (target === 'library') guarded(loadLibrary, { into });
   if (target === 'room') guarded(renderRoomView, { into });
   if (target === 'ranking') guarded(loadRanking, { into });
@@ -326,11 +322,18 @@ function renderToday() {
         stats.streak > 1
           ? `오늘 몫을 다 읽었습니다.<br>${stats.streak}일째 이어 가는 중입니다.`
           : '오늘 몫을 다 읽었습니다.<br>내일 또 한 편이 기다립니다.'
-      }</p>`;
+      }</p>` +
+      // 방금 함께 받은 도전과제는 토스트가 아니라 여기에 적는다. 토스트는 이 칸을
+      // 덮었고, 말하는 것도 이 칸과 같았다(진단 5번).
+      (state.justEarned?.length
+        ? `<p class="day-done-earned">함께 받은 도전과제 — ${state.justEarned.map((c) => esc(c.title)).join(', ')}</p>`
+        : '');
   }
 
   bindMissions();
-  markPoemRead(poem.id);
+  // 여기서 '읽음' 을 찍지 않는다. renderToday 는 앱을 열 때 불리므로, 여기서 찍으면
+  // 시를 펴 보지도 않았는데 읽은 것이 됐다(진단 10번). 오늘의 시 화면을 실제로 열 때
+  // switchView 가 찍는다.
 }
 
 /**
@@ -402,8 +405,15 @@ function missionHtml(mission) {
         <span class="mission-hint" data-counter>0 / ${min}자</span>
       </div>`;
   } else {
-    controls = `<div class="mission-actions">
-        <button class="btn btn-primary" data-act="check">${icon('check')}읽었습니다</button>
+    // '읽었습니다' 를 누르기만 하면 +20 이던 것(진단 3번)을 막는다. 오늘의 시를 실제로
+    // 펴 둔 시간만큼 기다려야 켜진다. 화면을 떠나거나 앱을 내리면 시간도 멈춘다.
+    // 서버가 시간을 재지 않는 이유는 길의 '천천히 읽기' 와 같다 — 느린 네트워크에서
+    // 제대로 읽은 사람이 손해를 본다.
+    controls = mission.completed
+      ? ''
+      : `<div class="mission-actions">
+        <button class="btn btn-primary" data-act="check" disabled>${icon('check')}읽었습니다</button>
+        <span class="mission-hint" data-dwell-left></span>
       </div>`;
   }
 
@@ -435,6 +445,7 @@ function bindMissions() {
     }
 
     $('[data-act="check"]', card)?.addEventListener('click', () => submit(card, id, {}));
+    armDwell(card);
     $('[data-act="text"]', card)?.addEventListener('click', () =>
       submit(card, id, { text: input?.value ?? '' }),
     );
@@ -443,6 +454,38 @@ function bindMissions() {
       if (picked) submit(card, id, { answer: Number(picked.dataset.choice) });
     });
   }
+}
+
+/** 시 길이에 맞춘 읽는 시간. 짧은 시도 8초, 긴 시도 45초를 넘지 않는다. */
+function dwellMsFor(poem) {
+  const chars = poem ? poem.stanzas.flat().join('').length : 200;
+  return Math.min(45000, Math.max(8000, chars * 110));
+}
+
+let dwellTimer = null;
+function armDwell(card) {
+  const btn = $('[data-act="check"]', card);
+  const left = $('[data-dwell-left]', card);
+  if (!btn || !left) return;
+  let remaining = state.dwellLeft ?? dwellMsFor(state.today?.poem);
+  clearInterval(dwellTimer);
+  const tick = () => {
+    // 오늘의 시 화면을 보고 있고, 앱이 앞에 나와 있을 때만 시간이 간다.
+    const reading = document.body.dataset.view === 'today' && document.visibilityState === 'visible';
+    if (reading) remaining -= 500;
+    state.dwellLeft = Math.max(0, remaining);
+    if (remaining <= 0) {
+      clearInterval(dwellTimer);
+      btn.disabled = false;
+      left.textContent = '';
+      return;
+    }
+    left.textContent = reading
+      ? `천천히 읽는 중 · ${Math.ceil(remaining / 1000)}초`
+      : '오늘의 시를 펴 두면 시간이 갑니다';
+  };
+  tick();
+  dwellTimer = setInterval(tick, 500);
 }
 
 async function submit(card, missionId, payload) {
@@ -462,9 +505,45 @@ async function submit(card, missionId, payload) {
       return;
     }
 
-    for (const c of res.earnedChallenges || []) challengeToast(c);
-    if (res.dayComplete) toast('오늘 몫을 다 읽었습니다.', { tone: 'star', iconName: 'check' });
+    // 맞혔을 때도 말해 준다. 예전에는 아무 말 없이 다음 카드로 넘어갔다(진단 4번).
+    const picked = $('.choice[aria-pressed="true"]', card);
+    if (res.correct === true && picked) {
+      picked.classList.add('is-correct');
+      result.innerHTML = `${icon('check')}<span>맞았습니다.${res.earnedPoints ? ` <b>+${res.earnedPoints}</b>` : ''}</span>`;
+      result.className = 'result ok';
+      await new Promise((r) => setTimeout(r, 900));
+    }
 
+    const earned = res.earnedChallenges || [];
+    state.dwellLeft = null;
+    // 오늘 미션으로 받은 도전과제를 모아 둔다. 마무리 칸에 한꺼번에 적으려고.
+    state.todayEarned = [...(state.todayEarned ?? []), ...earned];
+    if (res.dayComplete) {
+      // 하루를 다 끝낸 순간에는 토스트를 띄우지 않는다. 마무리 칸이 그 말을 하고,
+      // 오늘 받은 도전과제도 모두 그 칸 안에 적는다. 앞 미션에서 띄운 토스트가 아직
+      // 살아 있으면 그것이 이 칸을 덮으므로 치운다 — 말하던 것은 칸 안에 다 있다.
+      const seen = new Set();
+      state.justEarned = state.todayEarned.filter((c) => !seen.has(c.id ?? c.title) && seen.add(c.id ?? c.title));
+      $('#toasts').replaceChildren();
+      await loadToday();
+      state.justEarned = null;
+      state.todayEarned = [];
+      const done = $('#today-done');
+      done.setAttribute('tabindex', '-1');
+      const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      done.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
+      done.focus({ preventScroll: true });
+      return;
+    }
+    // 도전과제가 여럿 한꺼번에 오면 한 장으로 묶는다.
+    if (earned.length === 1) challengeToast(earned[0]);
+    if (earned.length > 1) {
+      toast(`도전과제 ${earned.length}개 — ${earned.map((c) => c.title).join(', ')}`, {
+        tone: 'star',
+        iconName: 'star',
+        ms: 5000,
+      });
+    }
     await loadToday();
   } catch (err) {
     result.textContent = err.message;
@@ -560,9 +639,18 @@ async function openPoem(poemId) {
     `<div class="manuscript is-sheet">${poemHtml(poem)}</div>` +
     `<aside class="reading-note is-inset">${readingNoteHtml(poem)}</aside>`;
   $('#poem-dialog').showModal();
-  const earned = await markPoemRead(poemId);
-  if (earned?.length) loadLibrary();
+  // 펴자마자 '읽음' 을 찍으면 대화상자를 다섯 번 열었다 닫는 것으로 '다섯 편을 펼쳐
+  // 읽었습니다' 도전과제 점수가 생긴다. 펴 둔 시간이 시 길이만큼 지나야 읽은 것이다.
+  // 반만 요구한다 — 대화상자에서는 한 번 훑어 읽는 것이 보통이다.
+  clearTimeout(state.readTimer);
+  state.readTimer = setTimeout(async () => {
+    if (!$('#poem-dialog').open || state.openPoem?.id !== poemId) return;
+    const earned = await markPoemRead(poemId);
+    if (earned?.length) loadLibrary();
+  }, dwellMsFor(poem) / 2);
 }
+
+$('#poem-dialog').addEventListener('close', () => clearTimeout(state.readTimer));
 
 async function markPoemRead(poemId) {
   try {
@@ -579,691 +667,6 @@ $('#poem-transcribe').addEventListener('click', () => {
   $('#poem-dialog').close();
   openTranscribe(state.openPoem);
 });
-
-// ───────── 방 ─────────
-async function loadRooms() {
-  const { rooms } = await api('/rooms');
-  state.rooms = rooms;
-  if (!rooms.some((r) => r.id === state.activeRoomId)) state.activeRoomId = rooms[0]?.id ?? null;
-}
-
-async function renderRoomView() {
-  const has = state.rooms.length > 0;
-  $('#room-empty').hidden = has;
-  $('#room-main').hidden = !has;
-  if (!has) return;
-
-  $('#room-picker').innerHTML = state.rooms
-    .map(
-      (r) =>
-        `<option value="${r.id}"${r.id === state.activeRoomId ? ' selected' : ''}>${esc(
-          r.name,
-        )} · ${r.memberCount}명</option>`,
-    )
-    .join('');
-
-  return openRoom(state.activeRoomId);
-}
-
-$('#room-picker').addEventListener('change', (e) => {
-  state.activeRoomId = Number(e.target.value);
-  guarded(() => openRoom(state.activeRoomId), { into: 'section[data-view="room"]' });
-});
-
-$('#room-info-btn').addEventListener('click', async () => {
-  const { room, members } = await api(`/rooms/${state.activeRoomId}`);
-  toast(`초대 코드 ${room.code} · ${members.map((m) => m.displayName).join(', ')}`, {
-    iconName: 'users',
-    ms: 7000,
-  });
-  navigator.clipboard?.writeText(room.code).catch(() => {});
-});
-
-$('#create-room-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  try {
-    const { room } = await api('/rooms', {
-      method: 'POST',
-      body: { name: new FormData(e.target).get('name') },
-    });
-    e.target.reset();
-    await loadRooms();
-    state.activeRoomId = room.id;
-    renderRoomView();
-    toast(`초대 코드는 ${room.code} 입니다.`, { tone: 'star', iconName: 'users', ms: 8000 });
-  } catch (err) {
-    $('#room-error').textContent = err.message;
-  }
-});
-
-$('#join-room-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  try {
-    const { room } = await api('/rooms/join', {
-      method: 'POST',
-      body: { code: new FormData(e.target).get('code') },
-    });
-    e.target.reset();
-    await loadRooms();
-    state.activeRoomId = room.id;
-    renderRoomView();
-  } catch (err) {
-    $('#room-error').textContent = err.message;
-  }
-});
-
-async function openRoom(roomId) {
-  if (!roomId) return;
-  const { messages, isOwner, reportReasons } = await api(`/rooms/${roomId}/messages?limit=60`);
-  state.messages = messages;
-  state.roomOwner = Boolean(isOwner);
-  state.reportReasons = reportReasons || [];
-  $('#room-progress-btn').hidden = !state.roomOwner;
-  renderMessages();
-  connectStream(roomId);
-}
-
-/** 가리기·되돌리기는 보는 사람마다 결과가 다르므로(선생님은 원문, 나머지는 빈 자리) 서버에서 다시 받는다. */
-async function refetchMessages() {
-  const { messages } = await api(`/rooms/${state.activeRoomId}/messages?limit=60`);
-  state.messages = messages;
-  renderMessages({ keepScroll: true });
-}
-
-function connectStream(roomId) {
-  state.eventSource?.close();
-  const source = new EventSource(`/api/rooms/${roomId}/stream`);
-  source.onmessage = (event) => {
-    const payload = JSON.parse(event.data);
-    if (payload.type === 'message') {
-      state.messages.push(payload.message);
-      renderMessages();
-    } else if (payload.type === 'hidden' || payload.type === 'unhidden') {
-      refetchMessages();
-    } else if (payload.type === 'cheer') {
-      const i = state.messages.findIndex((m) => m.id === payload.message.id);
-      if (i >= 0) {
-        state.messages[i] = payload.message;
-        renderMessages({ keepScroll: true });
-      }
-    }
-  };
-  state.eventSource = source; // EventSource 는 끊기면 스스로 다시 붙습니다
-}
-
-function renderMessages({ keepScroll = false } = {}) {
-  const log = $('#chat-log');
-  const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
-
-  log.innerHTML = state.messages.map(messageHtml).join('');
-
-  for (const btn of $$('.cheer', log)) {
-    btn.addEventListener('click', async () => {
-      btn.disabled = true;
-      try {
-        const { earnedChallenges } = await api(
-          `/rooms/${state.activeRoomId}/messages/${btn.dataset.message}/cheer`,
-          { method: 'POST', body: { kind: btn.dataset.cheer } },
-        );
-        for (const c of earnedChallenges || []) challengeToast(c);
-      } finally {
-        btn.disabled = false;
-      }
-    });
-  }
-
-  for (const btn of $$('.msg-more', log)) {
-    btn.addEventListener('click', () => openMessageActions(Number(btn.dataset.message)));
-  }
-
-  if (!keepScroll || atBottom) log.scrollTop = log.scrollHeight;
-}
-
-// ── 글 하나에 대해: 신고 · 차단 · (선생님) 가리기 ──
-function openMessageActions(messageId) {
-  const msg = state.messages.find((m) => m.id === messageId);
-  if (!msg) return;
-  state.actionMessage = msg;
-  $('#msg-dialog-quote').textContent = msg.body ? msg.body.slice(0, 120) : '(가려진 글)';
-  $('#msg-dialog-owner').hidden = !state.roomOwner;
-  $('#msg-hide').textContent = msg.hidden ? '가린 것을 되돌리기' : '이 글 가리기';
-  const mine = msg.userId === state.user?.id;
-  $('#msg-report').hidden = mine;
-  $('#msg-block').hidden = mine;
-  $('#msg-reasons').innerHTML = state.reportReasons
-    .map((r) => `<button class="btn btn-sm" type="button" data-reason="${esc(r)}">${esc(r)}</button>`)
-    .join('');
-  $('#msg-dialog').showModal();
-}
-
-$('#msg-reasons').addEventListener('click', async (e) => {
-  const btn = e.target.closest('[data-reason]');
-  if (!btn) return;
-  const msg = state.actionMessage;
-  try {
-    const { hidden } = await api(`/rooms/${state.activeRoomId}/messages/${msg.id}/report`, {
-      method: 'POST',
-      body: { reason: btn.dataset.reason },
-    });
-    $('#msg-dialog').close();
-    toast(hidden ? '신고했습니다. 신고가 쌓여 글이 가려졌습니다.' : '신고했습니다. 누가 신고했는지는 보이지 않습니다.');
-  } catch (err) {
-    toast(err.message);
-  }
-});
-
-$('#msg-hide').addEventListener('click', async () => {
-  const msg = state.actionMessage;
-  try {
-    await api(`/rooms/${state.activeRoomId}/messages/${msg.id}/hide`, {
-      method: 'POST',
-      body: { hidden: !msg.hidden },
-    });
-    $('#msg-dialog').close();
-  } catch (err) {
-    toast(err.message);
-  }
-});
-
-$('#msg-block').addEventListener('click', async () => {
-  const msg = state.actionMessage;
-  try {
-    await api('/me/blocks', { method: 'POST', body: { userId: msg.userId } });
-    $('#msg-dialog').close();
-    toast(`${msg.authorName} 님을 차단했습니다. 「나」에서 풀 수 있습니다.`);
-    refetchMessages();
-  } catch (err) {
-    toast(err.message);
-  }
-});
-
-// ── 선생님 보기 ──
-$('#room-progress-btn').addEventListener('click', async () => {
-  let data;
-  try {
-    data = await api(`/rooms/${state.activeRoomId}/progress`);
-  } catch (err) {
-    toast(err.message);
-    return;
-  }
-  const { summary, members } = data;
-  $('#progress-summary').textContent =
-    `${num(summary.count)}명 · 오늘 목표를 채운 사람 ${num(summary.metToday)}명 · 멈춘 사람 ${num(summary.stalled)}명`;
-  $('#progress-list').innerHTML = members
-    .map((m) => {
-      const idle = m.lastActive === null ? '아직 시작 전' : m.idleDays === 0 ? '오늘' : `${num(m.idleDays)}일 전`;
-      return `<li class="progress-row" data-stalled="${m.stalled}">
-        <div class="progress-name">${esc(m.name)}${m.role === 'owner' ? ' <span class="muted">· 방장</span>' : ''}${
-          m.stalled ? ' <span class="pill-stall">멈춤</span>' : ''
-        }</div>
-        <div class="progress-nums">
-          <span>마디 ${num(m.nodesDone)} / ${num(m.totalNodes)}</span>
-          <span>연속 ${num(m.streak)}일</span>
-          <span>필사 ${num(m.transcribed)}편</span>
-          <span>오답 ${num(m.openMistakes)}</span>
-          <span>마지막 ${idle}</span>
-        </div>
-      </li>`;
-    })
-    .join('');
-  $('#progress-dialog').showModal();
-});
-
-// ── 방에 나누기 ──
-function openShare(type, id, preview) {
-  if (!state.rooms.length) {
-    toast('방에 들어가면 나눌 수 있습니다.');
-    return;
-  }
-  state.sharing = { type, id };
-  $('#share-preview').textContent = preview.slice(0, 160);
-  $('#share-room').innerHTML = state.rooms
-    .map((r) => `<option value="${r.id}" ${r.id === state.activeRoomId ? 'selected' : ''}>${esc(r.name)}</option>`)
-    .join('');
-  $('#share-dialog').showModal();
-}
-
-$('#share-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const roomId = Number($('#share-room').value);
-  try {
-    await api(`/rooms/${roomId}/share`, { method: 'POST', body: state.sharing });
-    $('#share-dialog').close();
-    toast('방에 나눴습니다.');
-  } catch (err) {
-    toast(err.message);
-  }
-});
-
-const BOT_ICON = { poem: 'book', mission: 'check', challenge: 'star', notice: 'info' };
-
-function messageHtml(msg) {
-  const isBot = msg.authorType === 'bot';
-  const isMine = !isBot && msg.userId === state.user?.id;
-
-  // 가린 글. 원문이 빈 채로 왔으면 자리만 남긴다. 선생님과 글쓴이에게는 원문이
-  // 오고, 가려졌다는 표시를 붙인다.
-  if (msg.hidden && !msg.body) {
-    return `<div class="msg is-hidden" data-mine="${isMine}">
-      <div class="msg-bubble">가려진 글입니다.</div>
-    </div>`;
-  }
-
-  const SOURCE = { response: '한 줄 감상', transcription: '원고지 필사' };
-  const shareTag =
-    msg.kind === 'share' && msg.meta?.poemTitle
-      ? `<span class="share-tag">「${esc(msg.meta.poemTitle)}」 · ${esc(
-          SOURCE[msg.meta.source] || msg.meta.missionTitle || '감상',
-        )}</span>`
-      : '';
-  const hiddenTag = msg.hidden
-    ? `<span class="hidden-tag">가려진 글 — ${state.roomOwner ? '방장' : '글쓴이'}에게만 보입니다</span>`
-    : '';
-  const more = isBot
-    ? ''
-    : `<button class="icon-btn msg-more" type="button" data-message="${msg.id}" aria-label="이 글에 대해">${icon('more')}</button>`;
-
-  const cheers = isBot
-    ? ''
-    : `<div class="cheers">${CHEERS.map((c) => {
-        const found = msg.cheers.find((x) => x.kind === c.key);
-        const mine = found?.userIds.includes(state.user?.id);
-        return `<button class="cheer" type="button" aria-pressed="${Boolean(mine)}"
-          aria-label="${c.label}" title="${c.label}"
-          data-message="${msg.id}" data-cheer="${c.key}">${icon(c.icon, mine ? 'icon-solid' : '')}${
-            found?.count ? found.count : ''
-          }</button>`;
-      }).join('')}</div>`;
-
-  return `<div class="msg" data-kind="${esc(msg.kind)}" data-bot="${isBot}" data-mine="${isMine}" data-source="${esc(msg.meta?.source || '')}" data-hidden="${Boolean(msg.hidden)}">
-    ${isBot || isMine ? '' : `<span class="msg-author">${esc(msg.authorName)}</span>`}
-    <div class="msg-bubble">${isBot ? icon(BOT_ICON[msg.kind] || 'info') : ''}${hiddenTag}${shareTag}<span>${esc(
-      msg.body,
-    )}</span></div>
-    <div class="msg-foot">${msg.hidden ? '' : cheers}${more}</div>
-  </div>`;
-}
-
-$('#chat-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const input = $('#chat-input');
-  const body = input.value.trim();
-  if (!body) return;
-  input.value = '';
-  try {
-    const { earnedChallenges } = await api(`/rooms/${state.activeRoomId}/messages`, {
-      method: 'POST',
-      body: { body },
-    });
-    for (const c of earnedChallenges || []) challengeToast(c);
-  } catch (err) {
-    toast(err.message);
-    input.value = body;
-  }
-});
-
-// ───────── 랭킹 ─────────
-function bindSegmented(id, key, onChange) {
-  for (const btn of $$(`#${id} button`)) {
-    btn.addEventListener('click', () => {
-      for (const b of $$(`#${id} button`)) b.setAttribute('aria-selected', String(b === btn));
-      state.ranking[key] = btn.dataset[key];
-      onChange();
-    });
-  }
-}
-bindSegmented('ranking-scope', 'scope', () => loadRanking());
-bindSegmented('ranking-period', 'period', () => loadRanking());
-
-async function loadLeague() {
-  let t;
-  try {
-    t = await api('/ranking/league');
-  } catch {
-    return;
-  }
-  const l = t.league;
-  const ends = new Date(`${l.weekEnds}T00:00:00`).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
-  $('#league-week').textContent = `${ends}까지`;
-
-  // 등급 사다리. 지금 자리와 다음 자리만 또렷하게.
-  const ladder = ['한 줄', '한 연', '한 편', '시집']
-    .map((name, i) => `<li data-state="${i < l.tierIndex ? 'past' : i === l.tierIndex ? 'here' : 'ahead'}">${name}</li>`)
-    .join('');
-
-  const status = l.top
-    ? '맨 위 등급입니다. 더 올라갈 곳은 없고, 내려가는 일도 없습니다.'
-    : l.promotesNextWeek
-      ? `이번 주 문턱을 넘었습니다. 다음 주에 「${esc(l.next.name)}」${euroRo(l.next.name)} 올라갑니다.`
-      : `「${esc(l.next.name)}」까지 이번 주 <b>${num(l.remaining)}점</b> 남았습니다.`;
-
-  const rows = t.rows
-    .map(
-      (r) => `<li class="rank-row" data-me="${r.me}">
-        <span class="rank-no">${r.rank}</span>
-        <span>${r.me ? '나' : esc(r.name ?? '')}</span>
-        <span class="rank-points">${num(r.points)}</span>
-      </li>`,
-    )
-    .join('');
-
-  $('#league').innerHTML = `
-    <ol class="league-ladder" aria-label="등급">${ladder}</ol>
-    <p class="league-status">${status}</p>
-    ${
-      l.top
-        ? ''
-        : `<div class="meter meter-lg" role="progressbar" aria-label="이번 주 문턱까지" aria-valuemin="0" aria-valuemax="${l.threshold}" aria-valuenow="${l.points}"><i style="--fill:${Math.min(1, l.points / l.threshold).toFixed(3)}"></i></div>`
-    }
-    <p class="note">내려가는 일은 없습니다. 한 주를 쉬어도 등급은 그대로입니다.</p>
-    <h3 class="league-sub">「${esc(l.tier.name)}」에 있는 ${num(t.size)}명</h3>
-    <ol class="rank-list">${rows}</ol>`;
-}
-
-async function loadRanking() {
-  loadLeague();
-  const { scope, period } = state.ranking;
-  const useRoom = scope === 'room' && state.activeRoomId;
-  const { ranking, me } = await api(
-    useRoom ? `/rooms/${state.activeRoomId}/ranking?period=${period}` : `/ranking?period=${period}`,
-  );
-
-  if (!ranking.length) {
-    $('#rank-list').innerHTML =
-      '<li class="rank-me-note">아직 기록이 없습니다. 길을 한 마디 걸어 보세요.</li>';
-    $('#rank-me').textContent = '';
-    return;
-  }
-
-  $('#rank-list').innerHTML = ranking
-    .map(
-      (row) => `<li class="rank-row" data-me="${row.userId === state.user.id}">
-        <span class="rank-no">${row.rank}</span>
-        <span>${esc(row.displayName)}</span>
-        <span class="rank-points">${num(row.points)}</span>
-      </li>`,
-    )
-    .join('');
-
-  $('#rank-me').textContent = me.rank
-    ? `내 순위 ${me.rank}위 · ${num(me.points)}점`
-    : '아직 이 기간에는 점수가 없습니다.';
-}
-
-// ───────── 나 ─────────
-async function loadMe() {
-  const [me, board, push, journey, trs, lines] = await Promise.all([
-    api('/me'),
-    api('/me/challenges'),
-    api('/me/push'),
-    api('/journey'),
-    api('/transcriptions'),
-    api('/journey/responses'),
-  ]);
-  renderWalked(journey);
-  renderGallery(trs.transcriptions);
-  renderMyLines(lines.responses);
-  renderBlocks();
-
-  const s = me.stats;
-  // 표식은 여기에 두지 않습니다. 첫 화면 대기와 하루 완료에서는 표식이
-  // 할 일이 있지만(기다리는 동안 볼 것, 끝냈다는 표시), 이 줄에서는 이름
-  // 옆에 아무 일도 하지 않는 그림이 하나 붙을 뿐이었습니다.
-  $('#me-head').innerHTML = `
-    <div>
-      <div class="me-name">${esc(me.user.displayName)}</div>
-      <div class="me-sub">${esc(me.user.handle)}</div>
-    </div>`;
-
-  const peak = Math.max(1, ...me.activity.map((a) => a.points));
-  const strip = me.activity
-    .map((a) => {
-      const level = !a.points ? 0 : a.points >= peak * 0.66 ? 3 : a.points >= peak * 0.33 ? 2 : 1;
-      return `<span class="activity-day" data-level="${level}" title="${a.day} · ${a.points}점"></span>`;
-    })
-    .join('');
-
-  const stat = (value, label) =>
-    `<div class="stat"><span class="stat-value">${value}</span><span class="stat-label">${label}</span></div>`;
-
-  $('#me-stats').innerHTML = `<div class="stat-grid">
-      ${stat(num(s.totalPoints), '점수')}${stat(s.streak, '연속일')}
-      ${stat(s.missionsCompleted, '완료 미션')}${stat(s.poemsRead, '읽은 시')}
-      ${stat(board.earnedCount, '도전과제')}
-    </div>
-    <div class="activity" role="img" aria-label="최근 3주 활동">${strip}</div>`;
-
-  $('#challenge-count').textContent = `${board.earnedCount} / ${board.total}`;
-  $('#challenge-board').innerHTML = board.groups
-    .map(
-      (group) => `<section class="challenge-group">
-        <h3>${esc(group.name)}</h3>
-        <div class="challenge-grid">${group.items.map(challengeHtml).join('')}</div>
-      </section>`,
-    )
-    .join('');
-
-  renderPushPanel(push);
-
-  const size = document.documentElement.dataset.textsize || '';
-  $('#textsize-select').value = size;
-  if (me.goal?.goal) $('#goal-select').value = String(me.goal.goal);
-}
-
-$('#goal-select').addEventListener('change', async (e) => {
-  try {
-    await api('/me/goal', { method: 'PUT', body: { goal: Number(e.target.value) } });
-    toast('하루 목표를 바꿨습니다.');
-  } catch (err) {
-    toast(err.message);
-  }
-});
-
-/** 걸어온 길 — 장마다 몇 마디를 걸었는지. 아직 걷지 않은 장도 길 위에 그대로 둡니다. */
-function renderWalked(journey) {
-  $('#walked-count').textContent = `${num(journey.doneCount)} / ${num(journey.total)} 마디`;
-  $('#walked').innerHTML = journey.chapters
-    .map((c) => {
-      const state = c.empty ? 'empty' : c.doneCount === c.total ? 'done' : c.doneCount ? 'walking' : 'ahead';
-      return `<div class="walked-step" data-state="${state}">
-        <span class="walked-dot" aria-hidden="true"></span>
-        <span class="walked-place">${esc(c.place)}</span>
-        <span class="walked-n">${c.empty ? '시 없음' : `${c.doneCount} / ${c.total}`}</span>
-      </div>`;
-    })
-    .join('');
-}
-
-/** 필사 갤러리 — 원고지 한 장을 작게. 앞 서른 칸만 보입니다. */
-function renderGallery(items) {
-  const poems = new Set(items.map((t) => t.poemId)).size;
-  $('#gallery-count').textContent = items.length ? `${num(poems)}편 · ${num(items.length)}장` : '';
-  if (!items.length) {
-    $('#gallery').innerHTML = `<p class="note">아직 옮겨 적은 시가 없습니다. 시집에서 시를 펼치고 '옮겨 적기'를 누르면 여기에 원고지가 한 장씩 쌓입니다.</p>`;
-    return;
-  }
-  $('#gallery').innerHTML = items
-    .map((t) => {
-      const rows = layout(t.text, 6).slice(0, 5);
-      while (rows.length < 5) rows.push([]);
-      const grid = rows
-        .map((r) => {
-          const cells = [];
-          for (let i = 0; i < 6; i++) cells.push(`<span>${r[i] ? esc(r[i]) : ''}</span>`);
-          return cells.join('');
-        })
-        .join('');
-      const day = new Date(t.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
-      return `<figure class="sheet-card">
-        <div class="sheet-mini" aria-hidden="true">${grid}</div>
-        <figcaption><b>「${esc(t.title)}」</b><span>${esc(day)} · ${num(t.chars)}자</span></figcaption>
-        <button class="btn btn-quiet btn-sm" type="button" data-share="transcription" data-id="${t.id}">방에 나누기</button>
-      </figure>`;
-    })
-    .join('');
-  bindShareButtons('#gallery', items);
-}
-
-async function renderBlocks() {
-  let blocks = [];
-  try {
-    ({ blocks } = await api('/me/blocks'));
-  } catch {
-    return;
-  }
-  $('#blocks-section').hidden = !blocks.length;
-  $('#blocks-list').innerHTML = blocks
-    .map(
-      (b) => `<li class="switch-row"><span>${esc(b.name)}</span>
-        <button class="btn btn-sm" type="button" data-unblock="${b.id}">차단 풀기</button></li>`,
-    )
-    .join('');
-  for (const btn of $$('#blocks-list [data-unblock]')) {
-    btn.addEventListener('click', async () => {
-      await api(`/me/blocks/${btn.dataset.unblock}`, { method: 'DELETE' });
-      renderBlocks();
-    });
-  }
-}
-
-function bindShareButtons(root, items) {
-  for (const btn of $$(`${root} [data-share]`)) {
-    btn.addEventListener('click', () => {
-      const item = items.find((x) => x.id === Number(btn.dataset.id));
-      openShare(btn.dataset.share, Number(btn.dataset.id), item?.text ?? '');
-    });
-  }
-}
-
-/** 레슨 끝에 남긴 한 줄 감상들. 채팅으로 흘러가지 않고 여기 남습니다. */
-function renderMyLines(items) {
-  if (!items.length) {
-    $('#my-lines').innerHTML = `<p class="note">길을 걸으면 마디마다 한 줄씩 남습니다.</p>`;
-    return;
-  }
-  $('#my-lines').innerHTML = items
-    .slice(0, 12)
-    .map(
-      (r) => `<blockquote class="my-line"><p>${esc(r.text)}</p>
-        <footer><cite>「${esc(r.title)}」</cite>
-        <button class="btn btn-quiet btn-sm" type="button" data-share="response" data-id="${r.id}">방에 나누기</button></footer>
-      </blockquote>`,
-    )
-    .join('');
-  bindShareButtons('#my-lines', items);
-}
-
-function challengeHtml(c) {
-  const meter =
-    !c.earned && c.progress?.target
-      ? `<div class="meter"><i style="--fill:${(c.progress.ratio ?? 0).toFixed(3)}"></i></div>
-         <div class="challenge-desc">${c.progress.current} / ${c.progress.target}</div>`
-      : '';
-  return `<div class="challenge" data-earned="${c.earned}">
-    ${icon(esc(c.icon || 'star'), c.earned ? 'icon-solid' : '')}
-    <span class="challenge-name">${esc(c.title)}</span>
-    <span class="challenge-desc">${esc(c.description)}</span>
-    ${meter}
-  </div>`;
-}
-
-// ───────── 웹푸시 ─────────
-function renderPushPanel(push) {
-  if (!push.configured) {
-    // 학생에게 npm 명령과 .env 를 말하던 자리입니다. 그 말을 들어야 할 사람은
-    // 서버를 띄운 사람이므로, 화면에는 지금 쓸 수 없다는 것만 적고 고치는 법은
-    // 개발자 도구 콘솔에 남깁니다.
-    $('#push-panel').innerHTML = `<p class="note">
-      지금은 알림을 켤 수 없습니다. 이 앱을 운영하는 쪽에서 알림 설정을 마치면 여기서 켤 수 있습니다.</p>`;
-    console.info('[별 헤는 밤] 웹푸시 키(VAPID)가 없습니다. npm run keys 로 만들어 .env 에 넣고 서버를 다시 시작하세요.');
-    return;
-  }
-
-  const supported = 'serviceWorker' in navigator && 'PushManager' in window;
-  const p = push.prefs;
-  const toggle = (key, label, on) =>
-    `<label class="switch-row"><span>${label}</span>
-       <input type="checkbox" data-pref="${key}" ${on ? 'checked' : ''} /></label>`;
-
-  $('#push-panel').innerHTML = `
-    <div class="switch-row">
-      <span>이 기기에서 알림 받기</span>
-      <button class="btn btn-sm" id="push-toggle">${push.devices > 0 ? '해제' : '켜기'}</button>
-    </div>
-    ${toggle('poemPush', '오늘의 시', p.poemPush)}
-    ${toggle('missionPush', '미션 발행', p.missionPush)}
-    ${toggle('challengePush', '도전과제 달성', p.challengePush)}
-    <div class="switch-row"><span>방해 금지</span>
-      <span class="quiet-range">
-        <input type="number" min="0" max="23" data-pref="quietStart" value="${p.quietStart ?? ''}"
-               placeholder="22" aria-label="방해 금지 시작 시각" />
-        <span>~</span>
-        <input type="number" min="0" max="23" data-pref="quietEnd" value="${p.quietEnd ?? ''}"
-               placeholder="7" aria-label="방해 금지 끝 시각" />
-      </span></div>
-    <p class="note">${
-      supported
-        ? `연결된 기기 ${push.devices}대. 알림은 앱을 닫아도 도착합니다.`
-        : 'iOS 는 홈 화면에 추가한 뒤에 알림을 받을 수 있습니다.'
-    }</p>
-    ${push.devices > 0 ? '<button class="btn btn-sm" id="push-test">시험 삼아 하나 보내 보기</button>' : ''}`;
-
-  $('#push-toggle').addEventListener('click', () =>
-    push.devices > 0 ? disablePush() : enablePush(push.publicKey),
-  );
-  $('#push-test')?.addEventListener('click', async () => {
-    const res = await api('/me/push/test', { method: 'POST' });
-    toast(res.sent ? '알림을 보냈습니다.' : `보내지 못했습니다 (${res.skipped ?? '알 수 없음'}).`, {
-      iconName: 'bell',
-    });
-  });
-
-  for (const input of $$('[data-pref]', $('#push-panel'))) {
-    input.addEventListener('change', async () => {
-      const value =
-        input.type === 'checkbox' ? input.checked : input.value === '' ? null : Number(input.value);
-      await api('/me/push/prefs', { method: 'PUT', body: { [input.dataset.pref]: value } });
-      toast('알림 설정을 저장했습니다.', { iconName: 'check' });
-    });
-  }
-}
-
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  return Uint8Array.from([...atob(base64)].map((c) => c.charCodeAt(0)));
-}
-
-async function enablePush(publicKey) {
-  try {
-    if (!('serviceWorker' in navigator)) throw new Error('이 브라우저는 알림을 지원하지 않습니다.');
-    if ((await Notification.requestPermission()) !== 'granted') {
-      toast('브라우저에서 알림을 허용해 주세요.', { iconName: 'bell' });
-      return;
-    }
-    const registration = await navigator.serviceWorker.ready;
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey),
-    });
-    await api('/me/push/subscribe', { method: 'POST', body: { subscription } });
-    toast('이 기기로 알림을 보내겠습니다.', { tone: 'star', iconName: 'bell' });
-    loadMe();
-  } catch (err) {
-    toast(err.message);
-  }
-}
-
-async function disablePush() {
-  const registration = await navigator.serviceWorker.ready;
-  const subscription = await registration.pushManager.getSubscription();
-  if (subscription) {
-    await api('/me/push/unsubscribe', { method: 'POST', body: { endpoint: subscription.endpoint } });
-    await subscription.unsubscribe();
-  }
-  toast('이 기기의 알림을 껐습니다.', { iconName: 'bell' });
-  loadMe();
-}
 
 // ───────── 시작 ─────────
 applyTheme(currentTheme());
@@ -1321,33 +724,4 @@ addEventListener('unhandledrejection', (e) => {
   told.add(msg);
   setTimeout(() => told.delete(msg), 8000);
   toast(msg);
-});
-
-// ───────── 계정 지우기 ─────────
-$('#delete-account-btn').addEventListener('click', () => {
-  $('#delete-handle').textContent = state.user.handle;
-  $('#delete-form').reset();
-  $('#delete-error').textContent = '';
-  $('#delete-form button[type=submit]').disabled = true;
-  $('#delete-dialog').showModal();
-});
-// 아이디가 맞을 때만 버튼이 켜진다. 누르다 지우는 일을 막는다.
-$('#delete-form [name=confirm]').addEventListener('input', (e) => {
-  $('#delete-form button[type=submit]').disabled = e.target.value.trim() !== state.user.handle;
-});
-$('#delete-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  try {
-    await api('/me', { method: 'DELETE', body: { confirmHandle: e.target.confirm.value } });
-  } catch (err) {
-    $('#delete-error').textContent = err.message;
-    return;
-  }
-  state.eventSource?.close();
-  try {
-    await caches.delete('byeol-poems');
-  } catch {
-    // 캐시를 못 쓰는 브라우저 — 비울 것도 없다.
-  }
-  location.replace('/');
 });

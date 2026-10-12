@@ -1,6 +1,6 @@
 /* 서비스 워커 — 오프라인에서도 앱 껍데기가 뜨게 하고, 웹푸시를 받는다. */
 
-const CACHE = 'byeol-v9';
+const CACHE = 'byeol-v10';
 // 시 본문 응답. 앱 껍데기와 따로 둔다 — 로그아웃할 때 이것만 비운다.
 const API_CACHE = 'byeol-poems';
 const POEM_API = /^\/api\/poems(?:\/[^/]+)?$/; // 목록과 한 편. /read 같은 쓰기는 아니다.
@@ -16,6 +16,10 @@ const SHELL = [
   '/journey.js',
   '/transcribe.js',
   '/manuscript.js',
+  '/shared.js',
+  '/room.js',
+  '/ranking.js',
+  '/me.js',
   '/exam.js',
   '/lib/korean.js',
   '/theme-init.js',

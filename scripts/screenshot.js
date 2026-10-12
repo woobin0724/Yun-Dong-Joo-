@@ -148,10 +148,10 @@ await page.evaluate(() => {
 await page.waitForTimeout(500);
 await shot('04a-today-poem');
 await collect('오늘의 시');
+// '읽었습니다' 는 오늘의 시를 펴 둔 시간만큼 기다려야 켜진다. 꺼져 있는지도 검사한다.
 const check = page.locator('[data-act="check"]').first();
-if (await check.count()) {
-  await check.click();
-  await page.waitForTimeout(900);
+if ((await check.count()) && (await check.isEnabled())) {
+  allIssues.add('[오늘의 시] 읽었습니다 가 읽기도 전에 켜져 있습니다');
 }
 const choice = page.locator('.mission .choice').first();
 if (await choice.count()) {
